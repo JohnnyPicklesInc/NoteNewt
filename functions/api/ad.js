@@ -8,17 +8,32 @@
  */
 import { json } from '../_http.js';
 
-export async function onRequestGet({ env }) {
-  const house = {
+// First-party house ads cross-promoting sibling utilities. One is chosen at
+// random per request when no paid publisher is configured.
+const HOUSE_ADS = [
+  {
     type: 'house',
     text: '🦊 WhisperFox — share passwords & secrets by self-destructing link.',
-    link: 'https://whisperfox.pages.dev',
+    link: 'https://whisper-fox.com',
     image: null,
     view_url: null,
-  };
+  },
+  {
+    type: 'house',
+    text: '🧾 InvoiceIguana — turn an invoice or receipt into a shareable link. No signup.',
+    link: 'https://invoiceiguana.com',
+    image: null,
+    view_url: null,
+  },
+];
 
+function houseAd() {
+  return HOUSE_ADS[Math.floor(Math.random() * HOUSE_ADS.length)];
+}
+
+export async function onRequestGet({ env }) {
   const publisher = env.ETHICALADS_PUBLISHER;
-  if (!publisher) return json(house);
+  if (!publisher) return json(houseAd());
 
   try {
     const url =
@@ -26,9 +41,9 @@ export async function onRequestGet({ env }) {
       `?publisher=${encodeURIComponent(publisher)}` +
       '&ad_types=image.v1&keywords=privacy,productivity,writing';
     const r = await fetch(url, { headers: { accept: 'application/json' } });
-    if (!r.ok) return json(house);
+    if (!r.ok) return json(houseAd());
     const d = await r.json();
-    if (!d || (!d.body && !d.image)) return json(house);
+    if (!d || (!d.body && !d.image)) return json(houseAd());
     return json({
       type: 'ethicalads',
       text: stripTags(d.body || ''),
@@ -37,7 +52,7 @@ export async function onRequestGet({ env }) {
       view_url: httpUrl(d.view_url), // first-party <img> impression pixel
     });
   } catch {
-    return json(house);
+    return json(houseAd());
   }
 }
 

@@ -11,7 +11,10 @@ const links = [
   { href: '/privacy', text: 'Privacy' },
 ];
 // Sibling first-party utilities (cross-promo network).
-const siblings = [{ href: 'https://whisperfox.pages.dev', text: 'WhisperFox — send a secret' }];
+const siblings = [
+  { href: 'https://whisper-fox.com', text: 'WhisperFox — send a secret' },
+  { href: 'https://invoiceiguana.com', text: 'InvoiceIguana — invoice by link' },
+];
 
 const el = document.getElementById('siteFooter');
 if (el) {
