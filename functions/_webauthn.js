@@ -32,18 +32,26 @@ function bytesEqual(a, b) {
 
 // --- minimal CBOR decoder (maps, arrays, ints, byte/text strings) ------------
 
-/** Decode one CBOR data item. @returns {[value, nextOffset]} */
+/** Require n bytes available at offset o, else throw (bounds check). */
+function need(buf, o, n) {
+  if (o + n > buf.length) throw new Error('cbor: truncated');
+}
+
+/** Decode one CBOR data item. @returns {[value, nextOffset]}
+ *  Every read is bounds-checked so a malformed/hostile payload fails fast
+ *  instead of looping on out-of-range lengths (DoS-safe). */
 function cbor(buf, off) {
+  if (off >= buf.length) throw new Error('cbor: out of bounds');
   const b = buf[off];
   const major = b >> 5;
   const info = b & 0x1f;
   let len = info;
   let o = off + 1;
-  if (info === 24) { len = buf[o]; o += 1; }
-  else if (info === 25) { len = (buf[o] << 8) | buf[o + 1]; o += 2; }
-  else if (info === 26) { len = ((buf[o] << 24) | (buf[o + 1] << 16) | (buf[o + 2] << 8) | buf[o + 3]) >>> 0; o += 4; }
+  if (info === 24) { need(buf, o, 1); len = buf[o]; o += 1; }
+  else if (info === 25) { need(buf, o, 2); len = (buf[o] << 8) | buf[o + 1]; o += 2; }
+  else if (info === 26) { need(buf, o, 4); len = ((buf[o] << 24) | (buf[o + 1] << 16) | (buf[o + 2] << 8) | buf[o + 3]) >>> 0; o += 4; }
   else if (info === 27) {
-    // 64-bit length — read as Number (safe for our small payloads).
+    need(buf, o, 8);
     len = 0;
     for (let i = 0; i < 8; i++) len = len * 256 + buf[o + i];
     o += 8;
@@ -57,19 +65,21 @@ function cbor(buf, off) {
     case 1: // negative int
       return [-1 - len, o];
     case 2: { // byte string
-      const v = buf.subarray(o, o + len);
-      return [v, o + len];
+      need(buf, o, len);
+      return [buf.subarray(o, o + len), o + len];
     }
     case 3: { // text string
-      const v = dec.decode(buf.subarray(o, o + len));
-      return [v, o + len];
+      need(buf, o, len);
+      return [dec.decode(buf.subarray(o, o + len)), o + len];
     }
-    case 4: { // array
+    case 4: { // array — each element is ≥1 byte, so len can't exceed the remaining bytes
+      if (len > buf.length - o) throw new Error('cbor: array too long');
       const arr = [];
       for (let i = 0; i < len; i++) { const [v, no] = cbor(buf, o); arr.push(v); o = no; }
       return [arr, o];
     }
-    case 5: { // map
+    case 5: { // map — each entry is ≥2 bytes
+      if (len > buf.length - o) throw new Error('cbor: map too long');
       const map = new Map();
       for (let i = 0; i < len; i++) {
         const [k, ko] = cbor(buf, o);
@@ -206,6 +216,8 @@ export async function verifyAssertion({
   origin,
   rpId,
 }) {
+  if (credential.alg !== -7) throw new Error('unsupported credential alg'); // ES256 only
+
   const clientDataBytes = unb64u(clientDataJSONB64);
   parseClientData(clientDataBytes, { type: 'webauthn.get', challenge, origin });
 

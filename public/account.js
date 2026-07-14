@@ -2,6 +2,7 @@
 import { loadDek } from './notes.js';
 import { register, passkeysSupported } from './passkey.js';
 import { signOut } from './sync.js';
+import { wipeLocal } from './db.js';
 
 const infoEl = document.getElementById('accountInfo');
 const addSection = document.getElementById('addPasskeySection');
@@ -54,6 +55,22 @@ signOutBtn.addEventListener('click', async () => {
   if (!confirm('Sign out and clear this device? Unsynced local notes will be removed.')) return;
   await signOut();
   location.replace('/app');
+});
+
+const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+const deleteMessage = document.getElementById('deleteMessage');
+deleteAccountBtn.addEventListener('click', async () => {
+  if (!confirm('Permanently delete your account, all synced notes, and all passkeys? This cannot be undone.')) return;
+  deleteAccountBtn.disabled = true;
+  try {
+    const r = await fetch('/api/account/delete', { method: 'POST' });
+    if (!r.ok) throw new Error();
+    await wipeLocal(); // clear this device too
+    location.replace('/');
+  } catch {
+    deleteMessage.innerHTML = '<div class="msg msg-err">Could not delete your account. Please retry.</div>';
+    deleteAccountBtn.disabled = false;
+  }
 });
 
 render();

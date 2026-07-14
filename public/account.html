@@ -28,6 +28,15 @@
       <a class="btn btn-ghost" href="/app">‹ Back to notes</a>
       <button class="btn btn-danger" id="signOutBtn" type="button">Sign out</button>
     </p>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:1.5rem 0" />
+    <details>
+      <summary class="muted" style="cursor:pointer">Danger zone</summary>
+      <p class="muted" style="margin-top:0.75rem">Permanently delete your account, all synced notes,
+        and all passkeys. This cannot be undone.</p>
+      <button class="btn btn-danger" id="deleteAccountBtn" type="button">Delete my account</button>
+      <div id="deleteMessage"></div>
+    </details>
   </div>
   <script type="module" src="/account.js"></script>
 </body>

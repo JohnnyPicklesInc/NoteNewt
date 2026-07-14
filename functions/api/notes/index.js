@@ -43,6 +43,12 @@ export async function onRequestPost({ request, env }) {
   }
   const incoming = Array.isArray(body?.notes) ? body.notes : [];
   if (incoming.length > 500) return json({ error: 'too many notes in one push' }, 413);
+  // Cap per-note ciphertext (~1MB base64 ≈ 750KB plaintext) to bound storage abuse.
+  for (const n of incoming) {
+    if (n && typeof n.ciphertext === 'string' && n.ciphertext.length > 1_000_000) {
+      return json({ error: 'note too large' }, 413);
+    }
+  }
 
   const stmt = env.DB.prepare(
     `INSERT INTO notes (id, user_id, ciphertext, iv, updated_at, deleted)
