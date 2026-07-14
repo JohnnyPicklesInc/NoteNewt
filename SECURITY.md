@@ -15,6 +15,10 @@ zero-knowledge. Nothing here substitutes for reading the code — start at
     produced on the authenticator and never leaves the device. A synced passkey
     (iCloud Keychain / Google Password Manager) yields the same PRF output on the user's
     other devices, so they can unwrap the DEK; the server cannot.
+  - **Passphrase (no-PRF fallback):** on browsers without the PRF extension (e.g. Firefox),
+    `KEK = PBKDF2(passphrase, salt, 600000, SHA-256)`. The passkey still authenticates; only
+    the key source changes. The credential row records `key_type = 'passphrase'` and the salt;
+    still zero-knowledge (the passphrase never leaves the device).
   - **Recovery code:** `KEK = PBKDF2(recovery code, salt, 600000, SHA-256)`, wrapping a
     second copy of the DEK. Shown once at registration; only its SHA-256 is stored, as a
     lookup handle.

@@ -17,7 +17,9 @@ Pages, a handful of Pages Functions, D1, and KV. No framework, no bundler, no bu
   notes across devices — no email, no password. Your local notes migrate into the account.
 - **Zero-knowledge by default.** The note key (DEK) is wrapped by a secret from the passkey's
   WebAuthn **PRF extension**, which never leaves your device — so the server stores only
-  ciphertext it can't read. A one-time **recovery code** is your backup key.
+  ciphertext it can't read. On browsers without PRF (e.g. Firefox) the key comes from a
+  **passphrase** instead — same zero-knowledge envelope, chosen automatically. A one-time
+  **recovery code** is your backup key.
 - **Installable PWA.** Manifest + service worker; add to home screen, use offline.
 - **Ad-supported, privacy-first.** Ads are fetched server-side and rendered as first-party
   DOM (no third-party JS, strict CSP) — never inside note content. No paid tier, no billing.
@@ -119,7 +121,8 @@ per-origin automatically — no configuration. Set `ETHICALADS_PUBLISHER` (in `w
   add 192/512 PNG + maskable variants for best install UX.
 - **Sync conflicts.** v1 is last-write-wins per note by `updated_at`; per-note revisions/merge is
   a later improvement.
-- **Passkey coverage.** Requires WebAuthn + the PRF extension (broad on modern platforms). A
-  browser without them can still use the app locally; it just can't create a syncing account.
+- **Passkey coverage.** Requires WebAuthn (broad on modern platforms). Where the PRF extension
+  is unavailable (e.g. Firefox), the app transparently falls back to a passphrase-derived key,
+  so those users can still create a syncing, zero-knowledge account.
 
 MIT.

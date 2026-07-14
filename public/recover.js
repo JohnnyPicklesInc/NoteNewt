@@ -41,7 +41,14 @@ form.addEventListener('submit', async (e) => {
     // Register a new passkey for this device (session already set by /recover).
     if (passkeysSupported()) {
       try {
-        await register(dek, { authenticatedAdd: true });
+        await register(dek, {
+          authenticatedAdd: true,
+          getPassphrase: async () => {
+            const p = window.prompt('Your browser needs a passphrase to encrypt your notes. Set one (at least 8 characters):');
+            if (!p || p.length < 8) throw new Error('passphrase required');
+            return p;
+          },
+        });
       } catch {
         /* they can add one later from the account page */
       }

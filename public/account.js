@@ -9,6 +9,13 @@ const addBtn = document.getElementById('addPasskeyBtn');
 const addMessage = document.getElementById('addMessage');
 const signOutBtn = document.getElementById('signOutBtn');
 
+/** Fallback passphrase prompt for no-PRF browsers on this secondary path. */
+async function promptPassphrase() {
+  const p = window.prompt('Your browser needs a passphrase to encrypt your notes. Set one (at least 8 characters):');
+  if (!p || p.length < 8) throw new Error('A passphrase of at least 8 characters is required.');
+  return p;
+}
+
 async function render() {
   let me;
   try {
@@ -32,7 +39,8 @@ addBtn.addEventListener('click', async () => {
   try {
     const dek = await loadDek();
     // authenticatedAdd: the server attaches this passkey to the current session.
-    await register(dek, { authenticatedAdd: true });
+    // On no-PRF browsers, register() asks for a passphrase to protect the key.
+    await register(dek, { authenticatedAdd: true, getPassphrase: promptPassphrase });
     addMessage.innerHTML = '<div class="msg msg-ok">Passkey added. You can now sign in with it on this device.</div>';
     await render();
   } catch (e) {

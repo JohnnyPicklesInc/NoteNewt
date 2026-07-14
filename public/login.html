@@ -24,6 +24,14 @@
 
     <div id="message"></div>
 
+    <div id="passphraseSection" hidden>
+      <p id="ppPrompt" class="muted"></p>
+      <input class="field" type="password" id="pp1" autocomplete="new-password" placeholder="Passphrase" />
+      <input class="field" type="password" id="pp2" autocomplete="new-password" placeholder="Confirm passphrase" hidden />
+      <button class="btn btn-primary" id="ppSubmit" type="button" style="width:100%">Continue</button>
+      <div id="ppMsg"></div>
+    </div>
+
     <div id="recoveryBox" hidden>
       <div class="msg msg-ok">
         <strong>Save your recovery code.</strong> It's the only way back in if you lose your passkey.

@@ -66,12 +66,15 @@ export async function onRequestPost({ request, env }) {
       .run();
   }
 
+  const keyType = b.keyType === 'passphrase' ? 'passphrase' : 'prf';
+  if (keyType === 'passphrase' && !b.dekSaltB64) return json({ error: 'missing dekSaltB64' }, 400);
+
   await env.DB.prepare(
-    `INSERT INTO credentials (credential_id, user_id, pubkey_x, pubkey_y, alg, sign_count, wrapped_dek, wrapped_dek_iv, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO credentials (credential_id, user_id, pubkey_x, pubkey_y, alg, sign_count, key_type, dek_salt, wrapped_dek, wrapped_dek_iv, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(credential_id) DO NOTHING`,
   )
-    .bind(reg.credentialIdB64, userId, reg.pubkey.xB64, reg.pubkey.yB64, reg.pubkey.alg, reg.signCount, b.wrappedDekB64, b.wrappedDekIvB64, Math.floor(Date.now() / 1000))
+    .bind(reg.credentialIdB64, userId, reg.pubkey.xB64, reg.pubkey.yB64, reg.pubkey.alg, reg.signCount, keyType, b.dekSaltB64 || null, b.wrappedDekB64, b.wrappedDekIvB64, Math.floor(Date.now() / 1000))
     .run();
 
   // Optional recovery blob (set once, at first registration).

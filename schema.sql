@@ -29,7 +29,12 @@ CREATE TABLE IF NOT EXISTS credentials (
   pubkey_y       TEXT NOT NULL,                    -- base64url EC P-256 y
   alg            INTEGER NOT NULL,                 -- COSE alg (-7 = ES256)
   sign_count     INTEGER NOT NULL DEFAULT 0,
-  -- The DEK wrapped under THIS passkey's PRF-derived key (zero-knowledge).
+  -- How the DEK is wrapped for this credential (both are zero-knowledge):
+  --   'prf'        : key from the passkey WebAuthn PRF extension (default)
+  --   'passphrase' : key from PBKDF2(passphrase) — fallback for no-PRF browsers (Firefox)
+  key_type       TEXT NOT NULL DEFAULT 'prf',
+  dek_salt       TEXT,                             -- base64url PBKDF2 salt (passphrase mode only)
+  -- The DEK wrapped under this credential's key (PRF- or passphrase-derived).
   wrapped_dek    TEXT NOT NULL,
   wrapped_dek_iv TEXT NOT NULL,
   created_at     INTEGER NOT NULL,

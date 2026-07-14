@@ -59,7 +59,16 @@ export async function onRequestPost({ request, env }) {
 
   const session = await signSession(env.SESSION_SECRET, cred.user_id, Date.now() / 1000);
   return json(
-    { ok: true, userId: cred.user_id, dek: { wrappedB64: cred.wrapped_dek, ivB64: cred.wrapped_dek_iv } },
+    {
+      ok: true,
+      userId: cred.user_id,
+      dek: {
+        wrappedB64: cred.wrapped_dek,
+        ivB64: cred.wrapped_dek_iv,
+        keyType: cred.key_type || 'prf',
+        dekSaltB64: cred.dek_salt || null,
+      },
+    },
     200,
     { 'set-cookie': sessionCookie(session, SESSION_TTL) },
   );

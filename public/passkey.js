@@ -63,11 +63,12 @@ async function prfFromCreate(cred, rpId) {
 }
 
 /**
- * Create a passkey and register it. Wraps `dek` under the passkey PRF key and a
- * recovery code. Returns { userId, recoveryCode } — show the recovery code once.
- * If `authenticatedAdd` is true this adds a passkey to the current session.
+ * Create a passkey and register it. The DEK is wrapped either under the passkey
+ * PRF key (zero-knowledge, no passphrase) or — when the browser lacks PRF, e.g.
+ * Firefox — under a passphrase the caller supplies via `opts.getPassphrase`.
+ * Also wraps a recovery-code copy. Returns { userId, recoveryCode, keyType }.
  * @param {Uint8Array} dek The DEK to protect (the device/account data key).
- * @param {{label?: string, authenticatedAdd?: boolean}} [opts]
+ * @param {{label?: string, authenticatedAdd?: boolean, getPassphrase?: () => Promise<string>}} [opts]
  */
 export async function register(dek, opts = {}) {
   if (!passkeysSupported()) throw new Error('Passkeys are not supported in this browser.');
@@ -86,10 +87,24 @@ export async function register(dek, opts = {}) {
   });
   if (!cred) throw new Error('Passkey creation was cancelled.');
 
-  const kek = await kekFromPrf(await prfFromCreate(cred, o.rpId));
-  const wrapped = await wrapKey(kek, dek);
+  // Choose the key source: PRF if the authenticator supports it, else passphrase.
+  const ext = cred.getClientExtensionResults();
+  let keyType, saltB64, wrapped;
+  if (ext?.prf?.enabled) {
+    const kek = await kekFromPrf(await prfFromCreate(cred, o.rpId));
+    wrapped = await wrapKey(kek, dek);
+    keyType = 'prf';
+  } else {
+    if (!opts.getPassphrase) throw new Error('PRF_UNAVAILABLE');
+    const passphrase = await opts.getPassphrase();
+    const salt = randomBytes(16);
+    const kek = await pbkdf2(passphrase, salt);
+    wrapped = await wrapKey(kek, dek);
+    saltB64 = b64u(salt);
+    keyType = 'passphrase';
+  }
 
-  // Recovery code: a second wrapped copy of the DEK.
+  // Recovery code: a second wrapped copy of the DEK (always PBKDF2).
   const recoveryCode = generateRecoveryCode();
   const recSalt = randomBytes(16);
   const recKek = await pbkdf2(recoveryCode, recSalt);
@@ -102,6 +117,8 @@ export async function register(dek, opts = {}) {
     credentialIdB64: b64u(cred.rawId),
     userHandle: o.userHandle,
     label: opts.label,
+    keyType,
+    dekSaltB64: saltB64,
     wrappedDekB64: b64u(wrapped.wrapped),
     wrappedDekIvB64: b64u(wrapped.iv),
     recovery: {
@@ -112,14 +129,16 @@ export async function register(dek, opts = {}) {
     },
   };
   const out = await postJson('/api/auth/passkey/register', body);
-  return { userId: out.userId, recoveryCode };
+  return { userId: out.userId, recoveryCode, keyType };
 }
 
 /**
- * Authenticate with an existing passkey. Returns { userId, dek } where dek is the
- * account DEK, unwrapped locally via the passkey PRF key.
+ * Authenticate with an existing passkey. Returns { userId, dek }. The DEK is
+ * unwrapped either via the passkey PRF key or a passphrase (from
+ * `opts.getPassphrase`), depending on how the credential was registered.
+ * @param {{getPassphrase?: () => Promise<string>}} [opts]
  */
-export async function authenticate() {
+export async function authenticate(opts = {}) {
   if (!passkeysSupported()) throw new Error('Passkeys are not supported in this browser.');
   const o = await postJson('/api/auth/passkey/login-options', {});
 
@@ -134,10 +153,6 @@ export async function authenticate() {
   });
   if (!assertion) throw new Error('Sign-in was cancelled.');
 
-  const ext = assertion.getClientExtensionResults();
-  if (!ext?.prf?.results?.first) throw new Error('Could not derive your encryption key from this passkey.');
-  const kek = await kekFromPrf(ext.prf.results.first);
-
   const res = assertion.response;
   const out = await postJson('/api/auth/passkey/login', {
     credentialIdB64: b64u(assertion.rawId),
@@ -145,6 +160,16 @@ export async function authenticate() {
     clientDataJSONB64: b64u(res.clientDataJSON),
     signatureB64: b64u(res.signature),
   });
+
+  let kek;
+  if (out.dek.keyType === 'passphrase') {
+    if (!opts.getPassphrase) throw new Error('PASSPHRASE_REQUIRED');
+    kek = await pbkdf2(await opts.getPassphrase(), unb64u(out.dek.dekSaltB64));
+  } else {
+    const ext = assertion.getClientExtensionResults();
+    if (!ext?.prf?.results?.first) throw new Error('Could not derive your encryption key from this passkey.');
+    kek = await kekFromPrf(ext.prf.results.first);
+  }
 
   const dek = await unwrapKey(kek, unb64u(out.dek.ivB64), unb64u(out.dek.wrappedB64));
   return { userId: out.userId, dek };
