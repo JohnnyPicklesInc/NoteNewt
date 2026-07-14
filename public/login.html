@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sync with a passkey · Note Newt</title>
+  <meta name="description" content="Sync your encrypted notes across devices with a passkey — no password, no email." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#1f9d76" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="auth-card">
+    <h1>🦎 Sync your notes</h1>
+    <p class="muted">Use a passkey (Face ID, Touch ID, or your device PIN). No password, no email —
+      and your notes are end-to-end encrypted so only you can read them.</p>
+
+    <div id="controls">
+      <button class="btn btn-primary" id="createBtn" type="button" style="width:100%">Create a passkey</button>
+      <p class="muted" style="text-align:center;margin:0.75rem 0">— or —</p>
+      <button class="btn btn-ghost" id="signinBtn" type="button" style="width:100%">Sign in with a passkey</button>
+    </div>
+
+    <div id="message"></div>
+
+    <div id="recoveryBox" hidden>
+      <div class="msg msg-ok">
+        <strong>Save your recovery code.</strong> It's the only way back in if you lose your passkey.
+        We can't show it again.
+        <pre id="recoveryCode" style="font-size:1.1rem;letter-spacing:1px;margin:0.75rem 0 0"></pre>
+      </div>
+      <button class="btn btn-primary" id="recoveryDone" type="button" style="width:100%;margin-top:0.75rem">I've saved it — go to my notes</button>
+    </div>
+
+    <p class="muted" style="margin-top:1.5rem">
+      Your notes work fine without an account — this just syncs them across devices.
+      <a href="/app">Back to your notes</a> · <a href="/recover">Lost your passkey?</a>
+    </p>
+  </div>
+  <script type="module" src="/login.js"></script>
+</body>
+</html>

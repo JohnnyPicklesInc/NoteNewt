@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Note Newt">
+  <rect width="512" height="512" rx="112" fill="#1f9d76"/>
+  <path d="M150 360V152h44l124 150V152h44v208h-44L194 210v150z" fill="#ffffff"/>
+  <circle cx="356" cy="360" r="18" fill="#ffd24a"/>
+</svg>

@@ -1,0 +1,2 @@
+# index.html (served at /) is the SEO landing page; the app shell is /app.html.
+# No rewrites needed. Kept for future use.

@@ -1,0 +1,25 @@
+name = "notenewt"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "public"
+
+# Non-secret config. The only secret is SESSION_SECRET, from `.dev.vars` locally
+# and `wrangler pages secret put SESSION_SECRET` in production. (Passkey accounts
+# are zero-knowledge — there is no server-side key to configure.)
+[vars]
+# Leave empty to serve the built-in first-party "house" ad. Set to your
+# EthicalAds publisher id to serve real (privacy-first, server-fetched) ads.
+ETHICALADS_PUBLISHER = ""
+
+# Per-user notes + accounts (encrypted blobs only; never plaintext).
+# Create with `wrangler d1 create notenewt` and paste the id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "notenewt"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Short-lived magic-link tokens (self-expiring via KV TTL; content-free).
+# Create with `wrangler kv namespace create notenewt-tokens` and paste the id.
+# `wrangler pages dev` simulates the namespace locally, so any placeholder works.
+[[kv_namespaces]]
+binding = "TOKENS_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

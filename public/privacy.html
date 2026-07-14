@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy — Note Newt</title>
+  <meta name="description" content="How Note Newt handles your notes: encrypted on your device, no trackers, optional zero-knowledge. Plain-English privacy." />
+  <link rel="canonical" href="https://notenewt.com/privacy" />
+  <meta name="theme-color" content="#1f9d76" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="page content">
+    <p><a href="/">🦎 Note Newt</a></p>
+    <h1>Privacy</h1>
+    <p>Short version: your notes are encrypted on your device, we don't run trackers, and you can make your notes unreadable even to us.</p>
+
+    <h2>Your notes</h2>
+    <p>
+      Notes are encrypted with AES-256-GCM in your browser before they are stored. If you never sign
+      in, they never leave your device. If you sign in to sync, only <strong>ciphertext</strong> (plus
+      timestamps needed to sync) is stored on our servers — never the text of your notes.
+    </p>
+
+    <h2>Default vs. zero-knowledge</h2>
+    <p>
+      By default we hold a key that lets a new device recover your notes after you sign in with your
+      email link. If you set a <strong>passphrase</strong>, your key is derived from it and never
+      leaves your device — we then hold only ciphertext we cannot decrypt. This is your choice.
+    </p>
+
+    <h2>What we collect</h2>
+    <ul>
+      <li>Your email address, only if you choose to sync (used to send sign-in links).</li>
+      <li>No third-party analytics or tracking scripts. A strict content-security-policy blocks foreign JavaScript.</li>
+    </ul>
+
+    <h2>Ads</h2>
+    <p>
+      Note Newt is free and supported by privacy-respecting, contextual ads that are fetched by our
+      server and rendered as first-party content — no ad-tech JavaScript runs in your browser, and ads
+      never appear inside your notes.
+    </p>
+
+    <p><a class="cta" href="/app">Back to your notes →</a></p>
+  </main>
+  <footer class="site-footer" id="siteFooter"></footer>
+  <script type="module" src="/footer.js"></script>
+</body>
+</html>

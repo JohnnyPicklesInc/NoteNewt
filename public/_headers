@@ -1,0 +1,14 @@
+# Strict baseline for every page. Every script is first-party — no third-party
+# JS anywhere (ads are fetched server-side and rendered as first-party DOM), so a
+# single strict CSP covers the whole site and never sits foreign JS next to a
+# decrypted note.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+# The service worker must be allowed to control the whole origin.
+/sw.js
+  Service-Worker-Allowed: /
+  Cache-Control: no-cache

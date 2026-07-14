@@ -1,0 +1,21 @@
+{
+  "name": "Note Newt",
+  "short_name": "Note Newt",
+  "description": "Frictionless, encrypted notes. Start typing instantly; sync across devices when you want.",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f5",
+  "theme_color": "#1f9d76",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "New note", "url": "/app.html?new=1" }
+  ]
+}

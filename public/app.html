@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Note Newt</title>
+  <meta name="description" content="Your private notes. Start typing instantly — no signup." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#1f9d76" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="app-body">
+  <header class="topbar">
+    <a class="brand" href="/">🦎 Note&nbsp;Newt</a>
+    <div class="topbar-actions">
+      <button id="newBtn" class="btn btn-primary" type="button">+ New</button>
+      <a id="syncBtn" class="btn btn-ghost" href="/login.html">Sync</a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout" data-view="list">
+    <aside class="sidebar" id="sidebar">
+      <ul class="note-list" id="noteList" aria-label="Your notes"></ul>
+      <p class="empty-hint" id="emptyHint" hidden>No notes yet. Tap <strong>+ New</strong> to start.</p>
+    </aside>
+
+    <section class="editor-pane" id="editorPane">
+      <div class="editor-toolbar">
+        <button id="backBtn" class="btn btn-ghost back-btn" type="button" aria-label="Back to notes">‹ Notes</button>
+        <span id="status" class="status" aria-live="polite"></span>
+        <button id="deleteBtn" class="btn btn-danger" type="button">Delete</button>
+      </div>
+      <textarea id="editor" class="editor" placeholder="Start typing…" spellcheck="true"
+        autocapitalize="sentences" autocomplete="off"></textarea>
+      <div id="adSlot" class="ad-slot" aria-hidden="true"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

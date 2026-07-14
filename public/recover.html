@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recover access · Note Newt</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#1f9d76" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="auth-card">
+    <h1>🦎 Recover your notes</h1>
+    <p class="muted">Lost your passkey? Enter the recovery code you saved. We'll unlock your notes and
+      help you set up a new passkey on this device.</p>
+    <form id="recoverForm">
+      <label for="code">Recovery code</label>
+      <input class="field" type="text" id="code" autocomplete="off" spellcheck="false"
+        placeholder="XXXXX-XXXXX-XXXXX-XXXXX" required />
+      <button class="btn btn-primary" type="submit" id="submitBtn" style="width:100%">Recover</button>
+    </form>
+    <div id="message"></div>
+    <p class="muted" style="margin-top:1.5rem"><a href="/login">Back to sign in</a></p>
+  </div>
+  <script type="module" src="/recover.js"></script>
+</body>
+</html>

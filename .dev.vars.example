@@ -1,0 +1,9 @@
+# Local dev config for `wrangler pages dev`. Copy this file to `.dev.vars`
+# (which is gitignored) and it is picked up automatically:  cp .dev.vars.example .dev.vars
+#
+# This is a DEV-ONLY value, safe to commit as a template. In production set the
+# real one with:  wrangler pages secret put SESSION_SECRET   — never reuse this.
+
+# Signs stateless session cookies (HMAC-SHA-256). Replace with a long random
+# value in production.
+SESSION_SECRET=dev-only-session-secret-change-me-0123456789abcdef

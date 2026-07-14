@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Encrypted notepad — zero-knowledge, free | Note Newt</title>
+  <meta name="description" content="A free encrypted notepad in your browser. AES-256 encryption on your device, optional zero-knowledge passphrase, no signup, works offline. Your notes, unreadable to anyone but you." />
+  <link rel="canonical" href="https://notenewt.com/encrypted-notepad" />
+  <meta name="theme-color" content="#1f9d76" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+  <meta property="og:title" content="Encrypted notepad — zero-knowledge, free" />
+  <meta property="og:description" content="AES-256 encrypted notepad with optional zero-knowledge. No signup, works offline." />
+  <meta property="og:url" content="https://notenewt.com/encrypted-notepad" />
+</head>
+<body>
+  <main class="page content">
+    <p><a href="/">🦎 Note Newt</a></p>
+    <h1>An encrypted notepad</h1>
+    <p>
+      Note Newt is a simple encrypted notepad that runs in your browser and installs like an app.
+      Notes are protected with <strong>AES-256-GCM</strong>, the same encryption trusted for
+      sensitive data everywhere — and the encryption happens on your device, not on a server.
+    </p>
+    <p><a class="cta" href="/app">Open the notepad →</a></p>
+
+    <h2>How the encryption works</h2>
+    <p>
+      Each note is encrypted with a key that lives on your device. When you add a passphrase, that key
+      is wrapped using a value derived from your passphrase (PBKDF2, 600,000 iterations) — so the key
+      can only be unlocked by you. This is called <strong>zero-knowledge</strong> encryption: the
+      server stores only ciphertext and literally cannot decrypt it.
+    </p>
+    <p>
+      Because your passphrase is the only way in, we also give you a one-time <strong>recovery
+      code</strong> when you set it up. Keep it somewhere safe — it's the backup key to your notepad.
+    </p>
+
+    <h2>Simple, private, free</h2>
+    <ul>
+      <li>No signup to start; sync across devices when you want.</li>
+      <li>No trackers, no third-party scripts.</li>
+      <li>Free — supported by unobtrusive, privacy-respecting ads.</li>
+    </ul>
+    <p><a class="cta" href="/app">Start writing →</a></p>
+  </main>
+  <footer class="site-footer" id="siteFooter"></footer>
+  <script type="module" src="/footer.js"></script>
+</body>
+</html>

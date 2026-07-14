@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Account · Note Newt</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#1f9d76" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="auth-card">
+    <h1>🦎 Your account</h1>
+    <p id="accountInfo" class="muted">Loading…</p>
+
+    <div class="msg msg-ok">🔒 End-to-end encrypted. Your key is derived from your passkey and never
+      leaves your device — we only ever store notes we can't read.</div>
+
+    <section id="addPasskeySection">
+      <h2 style="font-size:1.1rem">Add another passkey</h2>
+      <p class="muted">Register this device (or a security key) as an additional way to sign in.</p>
+      <button class="btn btn-ghost" id="addPasskeyBtn" type="button" style="width:100%">Add a passkey to this account</button>
+      <div id="addMessage"></div>
+    </section>
+
+    <p style="margin-top:1.5rem">
+      <a class="btn btn-ghost" href="/app">‹ Back to notes</a>
+      <button class="btn btn-danger" id="signOutBtn" type="button">Sign out</button>
+    </p>
+  </div>
+  <script type="module" src="/account.js"></script>
+</body>
+</html>

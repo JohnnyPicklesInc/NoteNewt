@@ -1,0 +1,18 @@
+{
+  "name": "notenewt",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Note Newt — a frictionless, encrypted, take-notes-anywhere PWA. Start typing instantly; sync across devices when you want.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "wrangler pages dev public",
+    "selftest": "node scripts/selftest.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "deploy": "wrangler pages deploy public"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}
