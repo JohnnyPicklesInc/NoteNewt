@@ -22,8 +22,10 @@ const els = {
 
 let currentId = null;
 let pendingNew = false; // a new note not yet written to DB (stays out of sync until typed)
+let savedValue = ''; // editor content as last loaded/saved — used to detect unsaved edits
 let saveTimer = null;
 let syncTimer = null;
+let pollTimer = null; // periodic pull while an account is active
 let sync = null; // lazily-loaded sync module, if an account exists
 
 function setView(view) {
@@ -63,6 +65,7 @@ async function openNote(id) {
   currentId = id;
   pendingNew = false;
   els.editor.value = await getNoteText(id);
+  savedValue = els.editor.value;
   els.deleteBtn.hidden = false;
   els.status.textContent = 'Saved';
   setView('editor');
@@ -76,6 +79,7 @@ function newNote() {
   currentId = crypto.randomUUID();
   pendingNew = true;
   els.editor.value = '';
+  savedValue = '';
   els.deleteBtn.hidden = false;
   els.status.textContent = '';
   setView('editor');
@@ -100,6 +104,7 @@ async function flushSave() {
   const wasPending = pendingNew;
   await saveNote(currentId, text);
   pendingNew = false;
+  savedValue = text;
   els.status.textContent = 'Saved';
   if (wasPending) {
     await renderList(); // new note now appears in the list
@@ -146,9 +151,45 @@ async function initSync() {
     await sync.pull();
     await renderList();
     await sync.pushDirty();
+    startPolling();
   } catch {
     /* sync is best-effort; offline is fine */
   }
+}
+
+/** Pull remote changes and reflect them live, without disturbing active edits. */
+async function pollSync() {
+  if (!sync || document.hidden) return;
+  try {
+    await sync.pull();
+    await renderList();
+    await refreshOpenNote();
+  } catch {
+    /* offline — try again next tick */
+  }
+}
+
+/** If the open note changed remotely and the user has no unsaved edits, update it. */
+async function refreshOpenNote() {
+  if (currentId == null || pendingNew) return;
+  if (saveTimer !== null) return; // a save is pending — don't stomp it
+  if (els.editor.value !== savedValue) return; // user has unsaved edits — leave them be
+  const latest = await getNoteText(currentId);
+  if (latest !== els.editor.value) {
+    els.editor.value = latest;
+    savedValue = latest;
+  }
+}
+
+let pollingStarted = false;
+function startPolling() {
+  if (pollingStarted) return;
+  pollingStarted = true;
+  pollTimer = setInterval(pollSync, 10000); // every 10s while the tab is visible
+  // Also pull immediately when the user returns to the tab or reconnects.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pollSync(); });
+  window.addEventListener('focus', pollSync);
+  window.addEventListener('online', pollSync);
 }
 
 function updateSyncButton(account) {
