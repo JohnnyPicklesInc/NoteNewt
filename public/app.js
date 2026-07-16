@@ -5,7 +5,7 @@
  */
 import { listNotes, getNoteText, saveNote, softDelete, loadDek } from './notes.js';
 import { webCryptoAvailable } from './crypto.js';
-import { kvGet } from './db.js';
+import { kvGet, kvSet } from './db.js';
 import { renderAd } from './ad.js';
 
 const els = {
@@ -18,6 +18,8 @@ const els = {
   deleteBtn: document.getElementById('deleteBtn'),
   backBtn: document.getElementById('backBtn'),
   syncBtn: document.getElementById('syncBtn'),
+  banner: document.getElementById('localOnlyBanner'),
+  dismissBanner: document.getElementById('dismissBanner'),
 };
 
 let currentId = null;
@@ -27,6 +29,8 @@ let saveTimer = null;
 let syncTimer = null;
 let pollTimer = null; // periodic pull while an account is active
 let sync = null; // lazily-loaded sync module, if an account exists
+let nudgeAccount = null; // cached account state for the "local only" banner
+let nudgeDismissed = false;
 
 function setView(view) {
   els.layout.dataset.view = view; // 'list' | 'editor' (matters on mobile)
@@ -42,10 +46,28 @@ function relTime(ts) {
   return new Date(ts).toLocaleDateString();
 }
 
+/** Show the "saved only on this device" nudge for anonymous users with notes. */
+function updateNudge(noteCount) {
+  if (!els.banner) return;
+  els.banner.hidden = !!nudgeAccount || nudgeDismissed || noteCount === 0;
+}
+
+/** Ask the browser to keep our storage (exempt it from automatic eviction). */
+async function requestPersistence() {
+  try {
+    if (navigator.storage?.persist && !(await navigator.storage.persisted())) {
+      await navigator.storage.persist();
+    }
+  } catch {
+    /* best-effort */
+  }
+}
+
 async function renderList() {
   const notes = await listNotes();
   els.list.textContent = '';
   els.emptyHint.hidden = notes.length > 0 || pendingNew;
+  updateNudge(notes.length);
   for (const n of notes) {
     const li = document.createElement('li');
     li.className = 'note-item' + (n.id === currentId ? ' active' : '');
@@ -144,6 +166,7 @@ async function deleteCurrent() {
 
 async function initSync() {
   const account = await kvGet('account');
+  nudgeAccount = account;
   updateSyncButton(account);
   if (!account) return; // anonymous: nothing to sync
   try {
@@ -216,8 +239,18 @@ async function boot() {
     els.status.textContent = 'Secure storage unavailable (needs HTTPS).';
     return;
   }
+  requestPersistence(); // ask the browser not to auto-evict our storage
+  nudgeDismissed = !!(await kvGet('nudgeDismissed'));
+  nudgeAccount = await kvGet('account');
+
   await loadDek();
   await renderList();
+
+  els.dismissBanner.addEventListener('click', () => {
+    nudgeDismissed = true;
+    els.banner.hidden = true;
+    kvSet('nudgeDismissed', true).catch(() => {});
+  });
 
   const wantsNew = new URLSearchParams(location.search).get('new') === '1';
   const notes = await listNotes();
