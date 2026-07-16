@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sync with a passkey · Note Newt</title>
-  <meta name="description" content="Sync your encrypted notes across devices with a passkey — no password, no email." />
+  <title>Sync your notes · Note Newt</title>
+  <meta name="description" content="Sign in or create an account to sync your encrypted notes across devices." />
   <meta name="robots" content="noindex" />
   <meta name="theme-color" content="#1f9d76" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -13,37 +13,64 @@
 <body>
   <div class="auth-card">
     <h1>🦎 Sync your notes</h1>
-    <p class="muted">Use a passkey (Face ID, Touch ID, or your device PIN). No password, no email —
-      and your notes are end-to-end encrypted so only you can read them.</p>
+    <p class="muted">A username + passphrase works on any browser. Your notes are end-to-end
+      encrypted — only you can read them.</p>
 
-    <div id="controls">
-      <button class="btn btn-primary" id="createBtn" type="button" style="width:100%">Create a passkey</button>
-      <p class="muted" style="text-align:center;margin:0.75rem 0">— or —</p>
-      <button class="btn btn-ghost" id="signinBtn" type="button" style="width:100%">Sign in with a passkey</button>
+    <div class="tabs" id="tabs">
+      <button class="tab active" id="tabSignin" type="button">Sign in</button>
+      <button class="tab" id="tabCreate" type="button">Create account</button>
     </div>
+
+    <form id="signinForm">
+      <label for="siUser">Username</label>
+      <input class="field" id="siUser" autocomplete="username" autocapitalize="none" spellcheck="false" />
+      <label for="siPass">Passphrase</label>
+      <input class="field" type="password" id="siPass" autocomplete="current-password" />
+      <button class="btn btn-primary" id="signinBtn" type="submit" style="width:100%">Sign in</button>
+      <p class="muted" id="orLine" style="text-align:center;margin:0.75rem 0">— or —</p>
+      <button class="btn btn-ghost" id="passkeyBtn" type="button" style="width:100%">Use a passkey</button>
+    </form>
+
+    <form id="createForm" hidden>
+      <label for="cuUser">Choose a username</label>
+      <input class="field" id="cuUser" autocomplete="username" autocapitalize="none" spellcheck="false"
+        placeholder="3–32 chars: letters, numbers, . _ -" />
+      <label for="cuPass">Passphrase</label>
+      <input class="field" type="password" id="cuPass" autocomplete="new-password" />
+      <label for="cuPass2">Confirm passphrase</label>
+      <input class="field" type="password" id="cuPass2" autocomplete="new-password" />
+      <div class="warn">⚠️ <strong>There is no password reset.</strong> If you forget your passphrase,
+        only your recovery code can restore your notes — we can't recover them for you.</div>
+      <button class="btn btn-primary" id="createBtn" type="submit" style="width:100%">Create account</button>
+    </form>
 
     <div id="message"></div>
 
     <div id="passphraseSection" hidden>
       <p id="ppPrompt" class="muted"></p>
-      <input class="field" type="password" id="pp1" autocomplete="new-password" placeholder="Passphrase" />
-      <input class="field" type="password" id="pp2" autocomplete="new-password" placeholder="Confirm passphrase" hidden />
+      <input class="field" type="password" id="pp1" autocomplete="current-password" placeholder="Passphrase" />
       <button class="btn btn-primary" id="ppSubmit" type="button" style="width:100%">Continue</button>
       <div id="ppMsg"></div>
     </div>
 
     <div id="recoveryBox" hidden>
       <div class="msg msg-ok">
-        <strong>Save your recovery code.</strong> It's the only way back in if you lose your passkey.
-        We can't show it again.
+        <strong>Save your recovery code.</strong> It's the only way back in if you forget your
+        passphrase. We can't show it again.
         <pre id="recoveryCode" style="font-size:1.1rem;letter-spacing:1px;margin:0.75rem 0 0"></pre>
       </div>
-      <button class="btn btn-primary" id="recoveryDone" type="button" style="width:100%;margin-top:0.75rem">I've saved it — go to my notes</button>
+      <button class="btn btn-ghost" id="addPasskeyBtn" type="button" style="width:100%;margin-top:0.75rem" hidden>
+        Add a passkey for faster sign-in on this device
+      </button>
+      <div id="addMsg"></div>
+      <button class="btn btn-primary" id="recoveryDone" type="button" style="width:100%;margin-top:0.75rem">
+        I've saved it — go to my notes
+      </button>
     </div>
 
     <p class="muted" style="margin-top:1.5rem">
-      Your notes work fine without an account — this just syncs them across devices.
-      <a href="/app">Back to your notes</a> · <a href="/recover">Lost your passkey?</a>
+      Notes work fine without an account too. <a href="/app">Back to your notes</a> ·
+      <a href="/recover">Lost access?</a>
     </p>
   </div>
   <script type="module" src="/login.js"></script>

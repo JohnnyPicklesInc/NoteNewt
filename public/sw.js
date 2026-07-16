@@ -4,7 +4,7 @@
  * never cached (they carry auth + ciphertext). This precaches the app shell so
  * the editor still opens offline.
  */
-const CACHE = 'notenewt-v3';
+const CACHE = 'notenewt-v4';
 const SHELL = [
   '/app.html',
   '/style.css',
@@ -14,6 +14,7 @@ const SHELL = [
   '/crypto.js',
   '/sync.js',
   '/passkey.js',
+  '/passphrase-auth.js',
   '/manifest.webmanifest',
   '/favicon.svg',
 ];

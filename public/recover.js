@@ -1,7 +1,7 @@
-/** Recovery: unlock the DEK from a recovery code, then register a new passkey. */
+/** Recovery: unlock the DEK from a recovery code and sign in; the user then sets
+ *  a new passphrase/passkey from the account page. */
 import { pbkdf2, unwrapKey, unb64u } from './crypto.js';
 import { setDek } from './notes.js';
-import { register, passkeysSupported } from './passkey.js';
 import { completeLogin } from './sync.js';
 
 const form = document.getElementById('recoverForm');
@@ -37,24 +37,10 @@ form.addEventListener('submit', async (e) => {
       return;
     }
     await setDek(dek);
-
-    // Register a new passkey for this device (session already set by /recover).
-    if (passkeysSupported()) {
-      try {
-        await register(dek, {
-          authenticatedAdd: true,
-          getPassphrase: async () => {
-            const p = window.prompt('Your browser needs a passphrase to encrypt your notes. Set one (at least 8 characters):');
-            if (!p || p.length < 8) throw new Error('passphrase required');
-            return p;
-          },
-        });
-      } catch {
-        /* they can add one later from the account page */
-      }
-    }
+    // Signed in via the recovery code. Set up a new passphrase/passkey from the
+    // account page (a fresh session is already set).
     await completeLogin(data.userId, dek);
-    location.replace('/app');
+    location.replace('/account');
   } catch {
     show('Network error — please try again.', 'msg-err');
   } finally {

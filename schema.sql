@@ -8,9 +8,18 @@
 -- wrapped (unreadable) DEKs, and ciphertext notes.
 
 CREATE TABLE IF NOT EXISTS users (
-  id                    TEXT PRIMARY KEY,          -- WebAuthn user handle (base64url), also our user id
+  id                    TEXT PRIMARY KEY,          -- user id (base64url); also a WebAuthn user handle
   created_at            INTEGER NOT NULL,          -- unix seconds
   label                 TEXT,                      -- optional display label for the account
+  -- Username + passphrase backbone (works on any browser; passkeys are optional).
+  -- The passphrase derives an auth secret (verified via pw_verifier) and a
+  -- separate encryption key that wraps the DEK (pw_wrapped_dek). Zero-knowledge:
+  -- the passphrase and the encryption key never reach the server.
+  username              TEXT,
+  pw_salt               TEXT,                      -- base64url PBKDF2 salt
+  pw_verifier           TEXT,                      -- base64url SHA-256(authSecret)
+  pw_wrapped_dek        TEXT,                      -- base64url DEK wrapped under the passphrase enc key
+  pw_wrapped_dek_iv     TEXT,
   -- DEK wrapped under a recovery-code-derived key (the backup path if every
   -- passkey is lost). Set when the user saves a recovery code.
   recovery_wrapped_dek  TEXT,
@@ -19,6 +28,9 @@ CREATE TABLE IF NOT EXISTS users (
   recovery_lookup       TEXT                       -- sha256(recovery code) for lookup on recovery
 );
 CREATE INDEX IF NOT EXISTS idx_users_recovery ON users (recovery_lookup);
+-- Unique index (not an inline constraint) so ALTER can add it on existing DBs,
+-- and so multiple NULL usernames are allowed (passkey-only accounts).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (username);
 
 -- One row per passkey. A synced passkey (iCloud/Google) covers a user's devices
 -- with one credential; additional devices add more rows.

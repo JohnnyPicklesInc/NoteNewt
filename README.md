@@ -13,13 +13,16 @@ Pages, a handful of Pages Functions, D1, and KV. No framework, no bundler, no bu
 
 - **Local-first.** The app opens straight into the editor. Notes are AES-256-GCM encrypted
   in the browser and stored in IndexedDB from the first keystroke. Works fully offline.
-- **Passkey sync.** Create a passkey (Face ID / Touch ID / device PIN) to sync encrypted
-  notes across devices — no email, no password. Your local notes migrate into the account.
-- **Zero-knowledge by default.** The note key (DEK) is wrapped by a secret from the passkey's
-  WebAuthn **PRF extension**, which never leaves your device — so the server stores only
-  ciphertext it can't read. On browsers without PRF (e.g. Firefox) the key comes from a
-  **passphrase** instead — same zero-knowledge envelope, chosen automatically. A one-time
-  **recovery code** is your backup key.
+- **Username + passphrase sync (works everywhere).** Create an account with a username and a
+  passphrase — no email — to sync encrypted notes across any browser or device (Firefox
+  included). Your local notes migrate into the account.
+- **Passkey as an optional fast-unlock.** On devices that support it (Chrome/Safari), add a
+  passkey (Face ID / Touch ID) for one-tap sign-in. It's a convenience layered on the same
+  account, not a separate thing.
+- **Zero-knowledge, unified.** One note key (DEK) is wrapped several ways — by the passphrase,
+  by each passkey's WebAuthn **PRF** secret, and by a one-time **recovery code** — all
+  unwrapping to the same key. The passphrase and keys never reach the server, so it stores
+  only ciphertext. **There is no passphrase reset** — the recovery code is the only backup.
 - **Installable PWA.** Manifest + service worker; add to home screen, use offline.
 - **Ad-supported, privacy-first.** Ads are fetched server-side and rendered as first-party
   DOM (no third-party JS, strict CSP) — never inside note content. No paid tier, no billing.

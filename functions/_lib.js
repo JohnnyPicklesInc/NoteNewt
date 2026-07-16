@@ -63,10 +63,21 @@ export function timingSafeEqual(a, b) {
   return r === 0;
 }
 
-/** SHA-256 of a UTF-8 string, as base64url. Used to key magic-link tokens in KV. */
+/** SHA-256 of a UTF-8 string, as base64url. */
 export async function sha256b64u(str) {
   const digest = await crypto.subtle.digest('SHA-256', encoder.encode(str));
   return b64u(digest);
+}
+
+/** SHA-256 of the RAW bytes decoded from a base64url string, as base64url.
+ *  Used to turn a client-sent authSecret into the stored passphrase verifier. */
+export async function sha256OfB64u(b64uStr) {
+  return b64u(await crypto.subtle.digest('SHA-256', unb64u(b64uStr)));
+}
+
+/** HMAC-SHA-256(secret, msg) as base64url. */
+export async function hmacSha256b64u(secretStr, msg) {
+  return b64u(await hmac(encoder.encode(secretStr), msg));
 }
 
 /** Random URL-safe token (default 32 bytes ≈ 43 chars). @returns {string} */

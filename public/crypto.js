@@ -117,11 +117,59 @@ export async function aesDecrypt(keyBytes, iv, ct) {
   return decoder.decode(await aesDecryptBytes(keyBytes, iv, ct));
 }
 
+/** HMAC-SHA-256. @param {Uint8Array} keyBytes @param {string|Uint8Array} msg @returns {Promise<Uint8Array>} */
+export async function hmacSha256(keyBytes, msg) {
+  const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const data = typeof msg === 'string' ? encoder.encode(msg) : msg;
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
+}
+
+/**
+ * Derive the two independent secrets a username+passphrase account needs, from
+ * one PBKDF2 master. `encKek` wraps the DEK and never leaves the device;
+ * `authSecret` is sent to the server (which only stores SHA-256 of it) to prove
+ * knowledge of the passphrase. Neither reveals the passphrase, and authSecret
+ * cannot decrypt anything.
+ * @param {string} passphrase
+ * @param {Uint8Array} saltBytes
+ * @returns {Promise<{encKek: Uint8Array, authSecret: Uint8Array}>}
+ */
+export async function deriveFromPassphrase(passphrase, saltBytes) {
+  const master = await pbkdf2(passphrase, saltBytes); // 32 bytes, 600k iterations
+  const encKek = await hmacSha256(master, 'notenewt-enc-v1');
+  const authSecret = await hmacSha256(master, 'notenewt-auth-v1');
+  return { encKek, authSecret };
+}
+
 // --- Envelope helpers --------------------------------------------------------
 
 /** Mint a fresh random 256-bit data-encryption key (DEK). @returns {Uint8Array} */
 export function generateDek() {
   return randomBytes(32);
+}
+
+/** SHA-256 of a UTF-8 string, as base64url. */
+export async function sha256b64u(str) {
+  return b64u(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(str))));
+}
+
+const RC_ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ0123456789'; // Crockford base32 (no I,L,O,U)
+
+/** A ~100-bit human-friendly recovery code, grouped as XXXXX-XXXXX-XXXXX-XXXXX. */
+export function generateRecoveryCode() {
+  const bytes = randomBytes(20);
+  let s = '';
+  for (let i = 0; i < 20; i++) s += RC_ALPHABET[bytes[i] & 31];
+  return s.match(/.{1,5}/g).join('-');
+}
+
+/** Build the recovery-code wrap of a DEK plus its server-side lookup handle. */
+export async function wrapForRecovery(dek) {
+  const code = generateRecoveryCode();
+  const salt = randomBytes(16);
+  const kek = await pbkdf2(code, salt);
+  const { iv, wrapped } = await wrapKey(kek, dek);
+  return { code, blob: { wrappedB64: b64u(wrapped), ivB64: b64u(iv), saltB64: b64u(salt), lookup: await sha256b64u(code) } };
 }
 
 /**

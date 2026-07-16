@@ -15,6 +15,7 @@ import {
   unwrapKey,
   pbkdf2,
   randomBytes,
+  deriveFromPassphrase,
   b64u,
   unb64u,
 } from '../public/crypto.js';
@@ -71,6 +72,25 @@ try {
   wrongKekFailed = true;
 }
 check('a wrong wrapping key cannot unwrap the DEK', wrongKekFailed);
+
+// --- username+passphrase derivation: enc key wraps DEK, auth secret verifies ---
+const pwSalt = randomBytes(16);
+const { encKek, authSecret } = await deriveFromPassphrase('correct horse battery staple', pwSalt);
+const pwWrapped = await wrapKey(encKek, dek);
+const { encKek: encKek2, authSecret: authSecret2 } = await deriveFromPassphrase('correct horse battery staple', pwSalt);
+check('same passphrase+salt reproduces the enc key', b64u(encKek) === b64u(encKek2));
+check('same passphrase+salt reproduces the auth secret', b64u(authSecret) === b64u(authSecret2));
+check('enc key and auth secret are different', b64u(encKek) !== b64u(authSecret));
+check('passphrase enc key unwraps the DEK', b64u(await unwrapKey(encKek2, pwWrapped.iv, pwWrapped.wrapped)) === b64u(dek));
+const wrongDerive = await deriveFromPassphrase('wrong passphrase', pwSalt);
+check('wrong passphrase yields a different auth secret (login would fail)', b64u(wrongDerive.authSecret) !== b64u(authSecret));
+let pwWrongFailed = false;
+try {
+  await unwrapKey(wrongDerive.encKek, pwWrapped.iv, pwWrapped.wrapped);
+} catch {
+  pwWrongFailed = true;
+}
+check('wrong passphrase cannot unwrap the DEK', pwWrongFailed);
 
 // --- recovery code path (a second wrapped copy of the DEK under PBKDF2) -------
 const recSalt = randomBytes(16);

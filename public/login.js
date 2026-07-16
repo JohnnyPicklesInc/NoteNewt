@@ -1,67 +1,49 @@
-/** Login page: create or use a passkey, then sync. On browsers without the
- *  passkey PRF extension (e.g. Firefox), the encryption key comes from a
- *  passphrase instead — prompted here. */
-import { register, authenticate, passkeysSupported } from './passkey.js';
+/** Login page. Primary: username + passphrase (works on any browser). Optional:
+ *  a passkey for fast unlock where supported. */
+import { registerWithPassphrase, loginWithPassphrase } from './passphrase-auth.js';
+import { authenticate, register, passkeysSupported } from './passkey.js';
 import { loadDek } from './notes.js';
 import { completeRegistration, completeLogin } from './sync.js';
 
-const controls = document.getElementById('controls');
-const createBtn = document.getElementById('createBtn');
-const signinBtn = document.getElementById('signinBtn');
-const message = document.getElementById('message');
-const recoveryBox = document.getElementById('recoveryBox');
-const recoveryCodeEl = document.getElementById('recoveryCode');
-const recoveryDone = document.getElementById('recoveryDone');
+const $ = (id) => document.getElementById(id);
+const tabSignin = $('tabSignin'), tabCreate = $('tabCreate');
+const signinForm = $('signinForm'), createForm = $('createForm');
+const message = $('message');
+const recoveryBox = $('recoveryBox'), recoveryCodeEl = $('recoveryCode');
+const addPasskeyBtn = $('addPasskeyBtn'), addMsg = $('addMsg'), recoveryDone = $('recoveryDone');
+const passkeyBtn = $('passkeyBtn'), orLine = $('orLine');
+const ppSection = $('passphraseSection'), ppPrompt = $('ppPrompt'), pp1 = $('pp1'), ppSubmit = $('ppSubmit'), ppMsg = $('ppMsg');
 
-const ppSection = document.getElementById('passphraseSection');
-const ppPrompt = document.getElementById('ppPrompt');
-const pp1 = document.getElementById('pp1');
-const pp2 = document.getElementById('pp2');
-const ppSubmit = document.getElementById('ppSubmit');
-const ppMsg = document.getElementById('ppMsg');
+const show = (html, cls) => (message.innerHTML = `<div class="msg ${cls}">${html}</div>`);
 
-function show(html, cls) {
-  message.innerHTML = `<div class="msg ${cls}">${html}</div>`;
-}
-function busy(on) {
-  createBtn.disabled = on;
-  signinBtn.disabled = on;
+if (!passkeysSupported()) {
+  passkeyBtn.hidden = true;
+  orLine.hidden = true;
 }
 
-/**
- * Show the passphrase form and resolve with the entered value.
- * @param {'create'|'unlock'} mode create shows a confirm field + min length.
- * @returns {Promise<string>}
- */
-function getPassphrase(mode) {
+// --- tabs ---
+function setTab(create) {
+  message.innerHTML = '';
+  tabCreate.classList.toggle('active', create);
+  tabSignin.classList.toggle('active', !create);
+  createForm.hidden = !create;
+  signinForm.hidden = create;
+}
+tabSignin.addEventListener('click', () => setTab(false));
+tabCreate.addEventListener('click', () => setTab(true));
+
+// --- passphrase prompt (only for a passkey credential that uses a passphrase) ---
+function getPassphrase() {
   return new Promise((resolve) => {
-    controls.hidden = true;
+    signinForm.hidden = true;
     message.innerHTML = '';
     ppMsg.innerHTML = '';
     pp1.value = '';
-    pp2.value = '';
-    pp2.hidden = mode !== 'create';
-    pp1.autocomplete = pp2.autocomplete = mode === 'create' ? 'new-password' : 'current-password';
-    ppPrompt.textContent =
-      mode === 'create'
-        ? "Your browser doesn't support device-based encryption, so set a passphrase to protect your notes. You'll need it to unlock them on each device — keep it safe."
-        : 'Enter your passphrase to unlock your notes on this device.';
+    ppPrompt.textContent = 'Enter your passphrase to unlock your notes on this device.';
     ppSection.hidden = false;
     pp1.focus();
-
     const onSubmit = () => {
-      if (mode === 'create') {
-        if (pp1.value.length < 8) {
-          ppMsg.innerHTML = '<div class="msg msg-err">Use at least 8 characters.</div>';
-          return;
-        }
-        if (pp1.value !== pp2.value) {
-          ppMsg.innerHTML = '<div class="msg msg-err">Passphrases don\'t match.</div>';
-          return;
-        }
-      } else if (!pp1.value) {
-        return;
-      }
+      if (!pp1.value) return;
       ppSubmit.removeEventListener('click', onSubmit);
       ppSection.hidden = true;
       resolve(pp1.value);
@@ -70,41 +52,68 @@ function getPassphrase(mode) {
   });
 }
 
-if (!passkeysSupported()) {
-  controls.hidden = true;
-  show('This browser doesn\'t support passkeys. Your notes still work locally on this device.', 'msg-err');
-}
-
-createBtn.addEventListener('click', async () => {
-  show('Follow your browser\'s prompt to create a passkey…', 'msg-ok');
-  busy(true);
+// --- sign in (username + passphrase) ---
+signinForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  show('Signing in…', 'msg-ok');
   try {
-    const dek = await loadDek(); // protect this device's existing local notes' key
-    const { userId, recoveryCode } = await register(dek, { getPassphrase: () => getPassphrase('create') });
-    await completeRegistration(userId);
-    controls.hidden = true;
-    recoveryCodeEl.textContent = recoveryCode;
-    recoveryBox.hidden = false;
-  } catch (e) {
-    controls.hidden = false;
-    show(e.message || 'Could not create a passkey.', 'msg-err');
-  } finally {
-    busy(false);
+    const { userId, dek } = await loginWithPassphrase($('siUser').value.trim(), $('siPass').value);
+    await completeLogin(userId, dek);
+    location.replace('/app');
+  } catch (err) {
+    show(err.message || 'Could not sign in.', 'msg-err');
   }
 });
 
-signinBtn.addEventListener('click', async () => {
+// --- sign in with a passkey ---
+passkeyBtn.addEventListener('click', async () => {
   show('Follow your browser\'s prompt to use your passkey…', 'msg-ok');
-  busy(true);
   try {
-    const { userId, dek } = await authenticate({ getPassphrase: () => getPassphrase('unlock') });
+    const { userId, dek } = await authenticate({ getPassphrase });
     await completeLogin(userId, dek);
     location.replace('/app');
-  } catch (e) {
-    controls.hidden = false;
-    show(e.message || 'Could not sign in.', 'msg-err');
-  } finally {
-    busy(false);
+  } catch (err) {
+    signinForm.hidden = false;
+    show(err.message || 'Could not sign in with a passkey.', 'msg-err');
+  }
+});
+
+// --- create account (username + passphrase) ---
+createForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = $('cuUser').value.trim().toLowerCase();
+  const p1 = $('cuPass').value, p2 = $('cuPass2').value;
+  if (!/^[a-z0-9_.-]{3,32}$/.test(username)) return show('Username must be 3–32 chars: letters, numbers, . _ -', 'msg-err');
+  if (p1.length < 8) return show('Use a passphrase of at least 8 characters.', 'msg-err');
+  if (p1 !== p2) return show('Passphrases don\'t match.', 'msg-err');
+
+  show('Creating your account…', 'msg-ok');
+  try {
+    const dek = await loadDek(); // protect this device's existing local notes' key
+    const { userId, recoveryCode } = await registerWithPassphrase(username, p1, dek);
+    await completeRegistration(userId);
+    tabCreate.parentElement.hidden = true;
+    createForm.hidden = true;
+    message.innerHTML = '';
+    recoveryCodeEl.textContent = recoveryCode;
+    addPasskeyBtn.hidden = !passkeysSupported();
+    recoveryBox.hidden = false;
+  } catch (err) {
+    show(err.message || 'Could not create your account.', 'msg-err');
+  }
+});
+
+addPasskeyBtn.addEventListener('click', async () => {
+  addMsg.innerHTML = '';
+  addPasskeyBtn.disabled = true;
+  try {
+    const dek = await loadDek();
+    await register(dek, { authenticatedAdd: true });
+    addMsg.innerHTML = '<div class="msg msg-ok">Passkey added — you can use it to sign in faster on this device.</div>';
+    addPasskeyBtn.hidden = true;
+  } catch (err) {
+    addMsg.innerHTML = `<div class="msg msg-err">${err.message || 'Could not add a passkey.'}</div>`;
+    addPasskeyBtn.disabled = false;
   }
 });
 

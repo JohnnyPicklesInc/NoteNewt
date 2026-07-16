@@ -6,33 +6,18 @@
  * are zero-knowledge by default. A recovery code wraps a second copy of the DEK
  * as the backup path.
  */
-import { b64u, unb64u, wrapKey, unwrapKey, pbkdf2, randomBytes } from './crypto.js';
+import { b64u, unb64u, wrapKey, unwrapKey, pbkdf2, randomBytes, wrapForRecovery } from './crypto.js';
 
 const PRF_SALT = new TextEncoder().encode('note-newt-prf-v1'); // fixed → stable PRF output
-const RC_ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ0123456789'; // Crockford base32 (no I,L,O,U)
 
 /** Are passkeys usable in this browser? */
 export function passkeysSupported() {
   return typeof window !== 'undefined' && !!window.PublicKeyCredential && !!navigator.credentials;
 }
 
-async function sha256(bytes) {
-  return new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-}
-async function sha256b64u(str) {
-  return b64u(await sha256(new TextEncoder().encode(str)));
-}
-
 /** Normalize a PRF output (ArrayBuffer) to a 32-byte AES key. */
 async function kekFromPrf(prfOutput) {
-  return sha256(new Uint8Array(prfOutput));
-}
-
-function generateRecoveryCode() {
-  const bytes = randomBytes(20);
-  let s = '';
-  for (let i = 0; i < 20; i++) s += RC_ALPHABET[bytes[i] & 31];
-  return s.match(/.{1,5}/g).join('-');
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(prfOutput)));
 }
 
 async function postJson(path, body) {
@@ -105,10 +90,7 @@ export async function register(dek, opts = {}) {
   }
 
   // Recovery code: a second wrapped copy of the DEK (always PBKDF2).
-  const recoveryCode = generateRecoveryCode();
-  const recSalt = randomBytes(16);
-  const recKek = await pbkdf2(recoveryCode, recSalt);
-  const recWrapped = await wrapKey(recKek, dek);
+  const rec = await wrapForRecovery(dek);
 
   const res = cred.response;
   const body = {
@@ -121,15 +103,10 @@ export async function register(dek, opts = {}) {
     dekSaltB64: saltB64,
     wrappedDekB64: b64u(wrapped.wrapped),
     wrappedDekIvB64: b64u(wrapped.iv),
-    recovery: {
-      wrappedB64: b64u(recWrapped.wrapped),
-      ivB64: b64u(recWrapped.iv),
-      saltB64: b64u(recSalt),
-      lookup: await sha256b64u(recoveryCode),
-    },
+    recovery: rec.blob,
   };
   const out = await postJson('/api/auth/passkey/register', body);
-  return { userId: out.userId, recoveryCode, keyType };
+  return { userId: out.userId, recoveryCode: rec.code, keyType };
 }
 
 /**

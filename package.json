@@ -10,7 +10,8 @@
     "selftest": "node scripts/selftest.mjs",
     "smoke": "node scripts/smoke.mjs",
     "e2e": "node scripts/e2e.mjs",
-    "e2e:nopin": "node scripts/e2e-nopin.mjs",
+    "e2e:pw": "node scripts/e2e-pw.mjs",
+    "e2e:live": "node scripts/e2e-live.mjs",
     "deploy": "wrangler pages deploy public"
   },
   "devDependencies": {

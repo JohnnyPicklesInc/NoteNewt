@@ -11,10 +11,16 @@ zero-knowledge. Nothing here substitutes for reading the code — start at
   encrypts note plaintext. Minted on a device the first time you use the app (anonymous),
   and adopted as the account key when you create a passkey.
 - **KEK (key-encryption key)** — wraps the DEK for storage:
-  - **Passkey PRF:** `KEK = SHA-256(PRF output)`. The passkey's WebAuthn PRF secret is
+  - **Passphrase (primary):** `master = PBKDF2(passphrase, salt, 600000)`, split via HMAC into
+    an **encryption key** (`HMAC(master,"enc")`, wraps the DEK, never sent) and an **auth secret**
+    (`HMAC(master,"auth")`, sent at login; the server stores only its SHA-256 as a verifier).
+    The passphrase and encryption key never reach the server; the auth secret can't decrypt
+    anything. Works on any browser — this is the account backbone.
+  - **Passkey PRF (optional):** `KEK = SHA-256(PRF output)`. The passkey's WebAuthn PRF secret is
     produced on the authenticator and never leaves the device. A synced passkey
     (iCloud Keychain / Google Password Manager) yields the same PRF output on the user's
-    other devices, so they can unwrap the DEK; the server cannot.
+    other devices, so they can unwrap the DEK; the server cannot. A fast-unlock accelerator on
+    top of the passphrase account.
   - **Passphrase (no-PRF fallback):** on browsers without the PRF extension (e.g. Firefox),
     `KEK = PBKDF2(passphrase, salt, 600000, SHA-256)`. The passkey still authenticates; only
     the key source changes. The credential row records `key_type = 'passphrase'` and the salt;

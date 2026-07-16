@@ -214,3 +214,7 @@ a { color: var(--brand-ink); }
 .msg-ok { background: rgba(31, 157, 118, 0.12); color: var(--brand-ink); }
 .msg-err { background: rgba(192, 57, 43, 0.12); color: var(--danger); }
 .muted { color: var(--muted); font-size: 0.9rem; }
+.tabs { display: flex; gap: 0.25rem; margin: 0.5rem 0 1.25rem; background: var(--surface-2); border-radius: 8px; padding: 0.25rem; }
+.tab { flex: 1; font: inherit; font-weight: 600; border: 0; background: transparent; color: var(--muted); padding: 0.5rem; border-radius: 6px; cursor: pointer; }
+.tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.warn { background: rgba(192, 57, 43, 0.1); color: var(--danger); padding: 0.6rem 0.75rem; border-radius: 8px; font-size: 0.85rem; margin: 0.75rem 0; }

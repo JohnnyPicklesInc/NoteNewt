@@ -14,8 +14,27 @@
     <h1>🦎 Your account</h1>
     <p id="accountInfo" class="muted">Loading…</p>
 
-    <div class="msg msg-ok">🔒 End-to-end encrypted. Your key is derived from your passkey and never
-      leaves your device — we only ever store notes we can't read.</div>
+    <div class="msg msg-ok">🔒 End-to-end encrypted. Your key never leaves your device — we only
+      ever store notes we can't read.</div>
+
+    <section id="passphraseSection">
+      <h2 style="font-size:1.1rem" id="ppTitle">Add a username &amp; passphrase</h2>
+      <p class="muted" id="ppDesc">Sign in on any browser (including Firefox), not just devices with your passkey.</p>
+      <form id="ppForm">
+        <div id="ppUserWrap">
+          <label for="ppUser">Username</label>
+          <input class="field" id="ppUser" autocomplete="username" autocapitalize="none" spellcheck="false"
+            placeholder="3–32 chars: letters, numbers, . _ -" />
+        </div>
+        <label for="ppP1">Passphrase</label>
+        <input class="field" type="password" id="ppP1" autocomplete="new-password" />
+        <label for="ppP2">Confirm passphrase</label>
+        <input class="field" type="password" id="ppP2" autocomplete="new-password" />
+        <div class="warn">⚠️ No password reset — if you forget it, only your recovery code restores your notes.</div>
+        <button class="btn btn-primary" id="ppSave" type="submit" style="width:100%">Save</button>
+        <div id="ppMsg"></div>
+      </form>
+    </section>
 
     <section id="addPasskeySection">
       <h2 style="font-size:1.1rem">Add another passkey</h2>
