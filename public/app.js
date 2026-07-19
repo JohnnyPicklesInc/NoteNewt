@@ -4,7 +4,7 @@
  * layer (sync.js) is loaded lazily and only does anything once an account exists.
  */
 import { listNotes, getNoteText, saveNote, softDelete, loadDek } from './notes.js';
-import { webCryptoAvailable, randomBytes, aesEncrypt, b64u } from './crypto.js';
+import { webCryptoAvailable } from './crypto.js';
 import { kvGet, kvSet } from './db.js';
 import { renderAd } from './ad.js';
 
@@ -23,12 +23,6 @@ const els = {
   search: document.getElementById('searchBox'),
   exportBtn: document.getElementById('exportBtn'),
   importFile: document.getElementById('importFile'),
-  shareBtn: document.getElementById('shareBtn'),
-  shareModal: document.getElementById('shareModal'),
-  shareLink: document.getElementById('shareLink'),
-  shareCopy: document.getElementById('shareCopy'),
-  shareClose: document.getElementById('shareClose'),
-  shareMsg: document.getElementById('shareMsg'),
 };
 
 let currentId = null;
@@ -61,47 +55,6 @@ function relTime(ts) {
 function updateNudge() {
   if (!els.banner) return;
   els.banner.hidden = !!nudgeAccount || nudgeDismissed || lastNoteCount === 0;
-}
-
-/** Share the current note as an end-to-end-encrypted link (key in the fragment). */
-async function shareNote() {
-  if (currentId == null) return;
-  await flushSave();
-  const text = els.editor.value;
-  if (!text.trim()) {
-    els.status.textContent = 'Nothing to share yet';
-    return;
-  }
-  els.status.textContent = 'Creating link…';
-  try {
-    const key = randomBytes(32); // fresh per-share key — never the account key
-    const { iv, ct } = await aesEncrypt(key, text);
-    const r = await fetch('/api/share', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ciphertextB64: b64u(ct), ivB64: b64u(iv) }),
-    });
-    const data = await r.json();
-    if (!r.ok) {
-      els.status.textContent = data.error || 'Share failed';
-      return;
-    }
-    els.status.textContent = 'Saved';
-    const link = `${location.origin}/s#${data.id}.${b64u(key)}`;
-    els.shareLink.value = link;
-    els.shareMsg.innerHTML = '';
-    els.shareModal.hidden = false;
-    els.shareLink.focus();
-    els.shareLink.select();
-    try {
-      await navigator.clipboard.writeText(link);
-      els.shareMsg.innerHTML = '<div class="msg msg-ok">Link copied to clipboard.</div>';
-    } catch {
-      /* clipboard may be blocked; the link is shown to copy manually */
-    }
-  } catch {
-    els.status.textContent = 'Share failed';
-  }
 }
 
 /** Download all notes as a re-importable JSON file. */
@@ -397,19 +350,6 @@ async function boot() {
   els.search.addEventListener('input', () => {
     searchQuery = els.search.value;
     renderList();
-  });
-  els.shareBtn.addEventListener('click', () => shareNote().catch(() => { els.status.textContent = 'Share failed'; }));
-  els.shareClose.addEventListener('click', () => { els.shareModal.hidden = true; });
-  els.shareModal.addEventListener('click', (e) => { if (e.target === els.shareModal) els.shareModal.hidden = true; });
-  els.shareCopy.addEventListener('click', async () => {
-    els.shareLink.select();
-    try {
-      await navigator.clipboard.writeText(els.shareLink.value);
-      els.shareMsg.innerHTML = '<div class="msg msg-ok">Link copied.</div>';
-    } catch {
-      document.execCommand('copy');
-      els.shareMsg.innerHTML = '<div class="msg msg-ok">Link copied.</div>';
-    }
   });
   els.exportBtn.addEventListener('click', () => exportNotes().catch(() => {}));
   els.importFile.addEventListener('change', async () => {

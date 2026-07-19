@@ -45,7 +45,6 @@
       <div class="editor-toolbar">
         <button id="backBtn" class="btn btn-ghost back-btn" type="button" aria-label="Back to notes">‹ Notes</button>
         <span id="status" class="status" aria-live="polite"></span>
-        <button id="shareBtn" class="btn btn-ghost" type="button">Share</button>
         <button id="deleteBtn" class="btn btn-danger" type="button">Delete</button>
       </div>
       <textarea id="editor" class="editor" placeholder="Start typing…" spellcheck="true"
@@ -53,20 +52,6 @@
       <div id="adSlot" class="ad-slot" aria-hidden="true"></div>
     </section>
   </main>
-
-  <div class="share-modal" id="shareModal" hidden>
-    <div class="share-box">
-      <h3 style="margin-top:0">Share this note</h3>
-      <p class="muted">Anyone with this link can read this note. It's end-to-end encrypted — the key
-        lives in the link, never on our servers. Link expires in 30 days.</p>
-      <input class="field" id="shareLink" readonly />
-      <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
-        <button class="btn btn-primary" id="shareCopy" type="button" style="flex:1">Copy link</button>
-        <button class="btn btn-ghost" id="shareClose" type="button">Close</button>
-      </div>
-      <div id="shareMsg"></div>
-    </div>
-  </div>
 
   <script type="module" src="/app.js"></script>
 </body>
