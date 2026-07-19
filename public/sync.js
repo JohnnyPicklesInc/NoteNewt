@@ -96,11 +96,13 @@ export async function pull() {
   for (const remote of notes) {
     maxTs = Math.max(maxTs, remote.updatedAt);
     const local = await getNoteRow(remote.id);
-    if (!local || remote.updatedAt <= local.updatedAt) continue; // local newer/equal → keep (it'll push)
+    // Keep local only when it exists and is newer/equal (it'll push). A note we
+    // don't have locally (new, or after a wipe) must always be applied.
+    if (local && remote.updatedAt <= local.updatedAt) continue;
 
-    // Remote is newer. If we have unpushed local edits that differ, it's a real
-    // conflict — save our version as a separate copy so nothing is lost.
-    if (local.dirty && dek) {
+    // Remote is newer than a local copy. If that copy has unpushed local edits
+    // that differ, it's a real conflict — save our version as a separate copy.
+    if (local && local.dirty && dek) {
       try {
         const localText = await aesDecrypt(dek, unb64u(local.iv), unb64u(local.ciphertext));
         const remoteText = await aesDecrypt(dek, unb64u(remote.iv), unb64u(remote.ciphertext));
