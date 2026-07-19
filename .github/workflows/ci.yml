@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      # Crypto self-test: note↔DEK, DEK wrap/unwrap, passphrase derive, recovery,
+      # sessions. Pure + offline, so it's fast and deterministic in CI.
+      - run: npm run selftest
+      # Every client + function module must at least parse.
+      - name: Syntax-check all JS
+        run: |
+          set -e
+          find public functions scripts -name '*.js' -o -name '*.mjs' | while read -r f; do
+            node --check "$f"
+          done
