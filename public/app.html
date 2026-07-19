@@ -45,6 +45,7 @@
       <div class="editor-toolbar">
         <button id="backBtn" class="btn btn-ghost back-btn" type="button" aria-label="Back to notes">‹ Notes</button>
         <span id="status" class="status" aria-live="polite"></span>
+        <button id="shareListBtn" class="btn btn-ghost" type="button">Share as list</button>
         <button id="deleteBtn" class="btn btn-danger" type="button">Delete</button>
       </div>
       <textarea id="editor" class="editor" placeholder="Start typing…" spellcheck="true"
@@ -52,6 +53,32 @@
       <div id="adSlot" class="ad-slot" aria-hidden="true"></div>
     </section>
   </main>
+
+  <div class="share-modal" id="listModal" hidden>
+    <div class="share-box">
+      <h3 style="margin-top:0">Share as a list</h3>
+      <p class="muted">Creates a separate shared list from this note's text. Anyone with the link can
+        view and edit it live — it's independent of your private note.</p>
+      <div id="listCreatePane">
+        <label style="display:flex;gap:0.5rem;align-items:center;margin:0.5rem 0">
+          <input type="checkbox" id="listPassCheck" /> Require a passphrase (extra protection)
+        </label>
+        <input class="field" type="password" id="listPass" placeholder="Passphrase (share it separately)" hidden />
+        <button class="btn btn-primary" id="listCreateBtn" type="button" style="width:100%">Create shared list</button>
+      </div>
+      <div id="listResult" hidden>
+        <label class="muted">Share link — anyone with it can edit:</label>
+        <input class="field" id="listShareLink" readonly />
+        <button class="btn btn-ghost" id="listCopyShare" type="button" style="width:100%;margin-top:0.35rem">Copy share link</button>
+        <label class="muted" style="display:block;margin-top:0.9rem">Owner link — keep private (lets you lock/delete):</label>
+        <input class="field" id="listOwnerLink" readonly />
+        <button class="btn btn-ghost" id="listCopyOwner" type="button" style="width:100%;margin-top:0.35rem">Copy owner link</button>
+        <p style="margin-top:0.75rem"><a id="listOpenLink" href="#" target="_blank" rel="noopener">Open the list →</a></p>
+      </div>
+      <div id="listMsg"></div>
+      <button class="btn btn-ghost" id="listClose" type="button" style="width:100%;margin-top:0.5rem">Close</button>
+    </div>
+  </div>
 
   <script type="module" src="/app.js"></script>
 </body>

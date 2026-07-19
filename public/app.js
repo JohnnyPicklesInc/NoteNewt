@@ -4,7 +4,7 @@
  * layer (sync.js) is loaded lazily and only does anything once an account exists.
  */
 import { listNotes, getNoteText, saveNote, softDelete, loadDek } from './notes.js';
-import { webCryptoAvailable } from './crypto.js';
+import { webCryptoAvailable, randomBytes, aesEncrypt, pbkdf2, b64u } from './crypto.js';
 import { kvGet, kvSet } from './db.js';
 import { renderAd } from './ad.js';
 
@@ -23,6 +23,20 @@ const els = {
   search: document.getElementById('searchBox'),
   exportBtn: document.getElementById('exportBtn'),
   importFile: document.getElementById('importFile'),
+  shareListBtn: document.getElementById('shareListBtn'),
+  listModal: document.getElementById('listModal'),
+  listPassCheck: document.getElementById('listPassCheck'),
+  listPass: document.getElementById('listPass'),
+  listCreateBtn: document.getElementById('listCreateBtn'),
+  listCreatePane: document.getElementById('listCreatePane'),
+  listResult: document.getElementById('listResult'),
+  listShareLink: document.getElementById('listShareLink'),
+  listOwnerLink: document.getElementById('listOwnerLink'),
+  listOpenLink: document.getElementById('listOpenLink'),
+  listCopyShare: document.getElementById('listCopyShare'),
+  listCopyOwner: document.getElementById('listCopyOwner'),
+  listMsg: document.getElementById('listMsg'),
+  listClose: document.getElementById('listClose'),
 };
 
 let currentId = null;
@@ -55,6 +69,75 @@ function relTime(ts) {
 function updateNudge() {
   if (!els.banner) return;
   els.banner.hidden = !!nudgeAccount || nudgeDismissed || lastNoteCount === 0;
+}
+
+function openListModal() {
+  els.listMsg.innerHTML = '';
+  els.listResult.hidden = true;
+  els.listCreatePane.hidden = false;
+  els.listPassCheck.checked = false;
+  els.listPass.hidden = true;
+  els.listPass.value = '';
+  els.listModal.hidden = false;
+}
+
+/** Create a standalone shared list from the current note's text. */
+async function createSharedList() {
+  const text = els.editor.value;
+  if (!text.trim()) { els.listMsg.innerHTML = '<div class="msg msg-err">Write something first.</div>'; return; }
+
+  let key, keyLinkPart = '', hasPassphrase = false, pwSaltB64 = null;
+  if (els.listPassCheck.checked) {
+    if (els.listPass.value.length < 6) { els.listMsg.innerHTML = '<div class="msg msg-err">Use a passphrase of at least 6 characters.</div>'; return; }
+    const salt = randomBytes(16);
+    key = await pbkdf2(els.listPass.value, salt);
+    hasPassphrase = true;
+    pwSaltB64 = b64u(salt); // key stays OUT of the link
+  } else {
+    key = randomBytes(32);
+    keyLinkPart = b64u(key);
+  }
+
+  const ownerSecret = randomBytes(32);
+  const ownerHashB64 = b64u(new Uint8Array(await crypto.subtle.digest('SHA-256', ownerSecret)));
+  const { iv, ct } = await aesEncrypt(key, text);
+
+  els.listCreateBtn.disabled = true;
+  els.listCreateBtn.textContent = 'Creating…';
+  try {
+    const r = await fetch('/api/list', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ciphertextB64: b64u(ct), ivB64: b64u(iv), ownerHashB64, hasPassphrase, pwSaltB64 }),
+    });
+    const data = await r.json();
+    if (!r.ok) { els.listMsg.innerHTML = `<div class="msg msg-err">${data.error || 'Could not create the list.'}</div>`; return; }
+
+    await kvSet(`listOwner:${data.id}`, b64u(ownerSecret)); // remember ownership on this device
+    const shareLink = `${location.origin}/l#${data.id}${keyLinkPart ? `.${keyLinkPart}` : ''}`;
+    const ownerLink = `${location.origin}/l#${data.id}.${keyLinkPart}.${b64u(ownerSecret)}`;
+    els.listShareLink.value = shareLink;
+    els.listOwnerLink.value = ownerLink;
+    els.listOpenLink.href = ownerLink; // open as owner
+    els.listCreatePane.hidden = true;
+    els.listResult.hidden = false;
+    els.listMsg.innerHTML = hasPassphrase
+      ? '<div class="msg msg-ok">Share the link and tell them the passphrase separately.</div>'
+      : '';
+  } catch {
+    els.listMsg.innerHTML = '<div class="msg msg-err">Network error — please try again.</div>';
+  } finally {
+    els.listCreateBtn.disabled = false;
+    els.listCreateBtn.textContent = 'Create shared list';
+  }
+}
+
+async function copyField(field, btn) {
+  field.select();
+  try { await navigator.clipboard.writeText(field.value); } catch { document.execCommand('copy'); }
+  const t = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => { btn.textContent = t; }, 1500);
 }
 
 /** Download all notes as a re-importable JSON file. */
@@ -351,6 +434,13 @@ async function boot() {
     searchQuery = els.search.value;
     renderList();
   });
+  els.shareListBtn.addEventListener('click', () => { flushSave(); openListModal(); });
+  els.listClose.addEventListener('click', () => { els.listModal.hidden = true; });
+  els.listModal.addEventListener('click', (e) => { if (e.target === els.listModal) els.listModal.hidden = true; });
+  els.listPassCheck.addEventListener('change', () => { els.listPass.hidden = !els.listPassCheck.checked; if (els.listPassCheck.checked) els.listPass.focus(); });
+  els.listCreateBtn.addEventListener('click', () => createSharedList().catch(() => { els.listMsg.innerHTML = '<div class="msg msg-err">Failed.</div>'; }));
+  els.listCopyShare.addEventListener('click', () => copyField(els.listShareLink, els.listCopyShare));
+  els.listCopyOwner.addEventListener('click', () => copyField(els.listOwnerLink, els.listCopyOwner));
   els.exportBtn.addEventListener('click', () => exportNotes().catch(() => {}));
   els.importFile.addEventListener('change', async () => {
     const file = els.importFile.files[0];

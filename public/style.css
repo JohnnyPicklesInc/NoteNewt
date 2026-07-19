@@ -241,6 +241,25 @@ a { color: var(--brand-ink); }
 .site-footer { border-top: 1px solid var(--border); padding: 2rem 1.25rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
 .site-footer a { margin: 0 0.5rem; }
 
+/* ================= Shared list page ================= */
+.list-editor {
+  width: 100%;
+  min-height: 55vh;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  padding: 1rem;
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  resize: vertical;
+  box-shadow: var(--shadow);
+  margin: 1rem 0;
+}
+.list-editor:read-only { opacity: 0.85; background: var(--surface-2); }
+.owner-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+
 /* ================= Auth pages ================= */
 .auth-card {
   max-width: 420px;

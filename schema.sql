@@ -64,3 +64,30 @@ CREATE TABLE IF NOT EXISTS notes (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 CREATE INDEX IF NOT EXISTS idx_notes_user_updated ON notes (user_id, updated_at);
+
+-- Shared lists: standalone, link-shared, end-to-end-encrypted collaborative lists.
+-- No account needed. The content key lives in the link fragment (or is derived
+-- from a passphrase) and never reaches the server. Ownership is a capability:
+-- owner_hash = SHA-256(owner secret); only the holder can lock/unlock/delete.
+CREATE TABLE IF NOT EXISTS shared_lists (
+  id             TEXT PRIMARY KEY,                 -- random public id (in the link)
+  ciphertext     TEXT NOT NULL,                    -- base64url AES-GCM ciphertext of the list
+  iv             TEXT NOT NULL,                    -- base64url IV
+  version        INTEGER NOT NULL DEFAULT 1,       -- bumped per write (optimistic concurrency)
+  locked         INTEGER NOT NULL DEFAULT 0,       -- 1 = read-only (owner lock)
+  owner_hash     TEXT NOT NULL,                    -- base64url SHA-256(owner secret)
+  has_passphrase INTEGER NOT NULL DEFAULT 0,       -- 1 = key derived from a passphrase
+  pw_salt        TEXT,                             -- base64url PBKDF2 salt (passphrase mode)
+  created_at     INTEGER NOT NULL,
+  updated_at     INTEGER NOT NULL
+);
+
+-- Recent versions kept for one-click revert of vandalism (capped per list).
+CREATE TABLE IF NOT EXISTS shared_list_versions (
+  id          TEXT NOT NULL,
+  version     INTEGER NOT NULL,
+  ciphertext  TEXT NOT NULL,
+  iv          TEXT NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (id, version)
+);

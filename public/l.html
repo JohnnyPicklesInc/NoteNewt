@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Shared list · Note Newt</title>
+  <meta name="description" content="A shared, end-to-end-encrypted list on Note Newt." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#1f9d76" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">🦎 Note&nbsp;Newt</a>
+    <span id="listState" class="sync-status"></span>
+  </header>
+
+  <main class="page">
+    <div id="listStatus" class="muted">Decrypting…</div>
+
+    <form id="passForm" hidden>
+      <p class="muted">This list is protected with a passphrase. Enter it to open the list.</p>
+      <input class="field" type="password" id="passInput" autocomplete="current-password" placeholder="Passphrase" />
+      <button class="btn btn-primary" type="submit" style="width:100%">Open list</button>
+      <div id="passMsg"></div>
+    </form>
+
+    <textarea id="listEditor" class="list-editor" hidden
+      placeholder="One item per line…" spellcheck="true" autocapitalize="sentences"></textarea>
+
+    <div id="ownerControls" class="owner-controls" hidden>
+      <button class="btn btn-ghost" id="lockBtn" type="button"></button>
+      <button class="btn btn-ghost" id="undoBtn" type="button">Undo last change</button>
+      <button class="btn btn-danger" id="deleteListBtn" type="button">Delete list</button>
+    </div>
+
+    <div class="share-cta" style="text-align:center;margin-top:2rem">
+      <p class="muted">🔒 End-to-end encrypted — the key is in the link, never on our servers.</p>
+      <a class="cta" href="/app">Make your own notes & lists →</a>
+    </div>
+  </main>
+  <script type="module" src="/l.js"></script>
+</body>
+</html>
