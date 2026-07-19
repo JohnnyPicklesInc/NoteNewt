@@ -31,6 +31,7 @@ let pollTimer = null; // periodic pull while an account is active
 let sync = null; // lazily-loaded sync module, if an account exists
 let nudgeAccount = null; // cached account state for the "local only" banner
 let nudgeDismissed = false;
+let lastNoteCount = 0;
 
 function setView(view) {
   els.layout.dataset.view = view; // 'list' | 'editor' (matters on mobile)
@@ -47,9 +48,9 @@ function relTime(ts) {
 }
 
 /** Show the "saved only on this device" nudge for anonymous users with notes. */
-function updateNudge(noteCount) {
+function updateNudge() {
   if (!els.banner) return;
-  els.banner.hidden = !!nudgeAccount || nudgeDismissed || noteCount === 0;
+  els.banner.hidden = !!nudgeAccount || nudgeDismissed || lastNoteCount === 0;
 }
 
 /** Ask the browser to keep our storage (exempt it from automatic eviction). */
@@ -67,7 +68,8 @@ async function renderList() {
   const notes = await listNotes();
   els.list.textContent = '';
   els.emptyHint.hidden = notes.length > 0 || pendingNew;
-  updateNudge(notes.length);
+  lastNoteCount = notes.length;
+  updateNudge();
   for (const n of notes) {
     const li = document.createElement('li');
     li.className = 'note-item' + (n.id === currentId ? ' active' : '');
@@ -165,9 +167,24 @@ async function deleteCurrent() {
 // --- optional sync -----------------------------------------------------------
 
 async function initSync() {
-  const account = await kvGet('account');
+  let account = await kvGet('account');
+  // Reconcile: we may have a valid server session but no local record (signed in
+  // on another browser/profile, or local data cleared). Ask the server.
+  if (!account && navigator.onLine) {
+    try {
+      const r = await fetch('/api/account/me');
+      if (r.ok) {
+        const me = await r.json();
+        account = { userId: me.userId, label: me.username || null };
+        await kvSet('account', account);
+      }
+    } catch {
+      /* offline — treat as anonymous for now */
+    }
+  }
   nudgeAccount = account;
   updateSyncButton(account);
+  await renderList(); // reflect signed-in state in the banner immediately
   if (!account) return; // anonymous: nothing to sync
   try {
     sync = await import('./sync.js');
