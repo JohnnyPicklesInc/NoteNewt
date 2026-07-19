@@ -75,8 +75,9 @@ async function encryptText(text) {
 }
 
 /**
- * List notes for the sidebar, newest first, excluding tombstones.
- * @returns {Promise<Array<{id:string,title:string,preview:string,updatedAt:number}>>}
+ * List notes for the sidebar, newest first, excluding tombstones. Each item
+ * carries a lowercased `haystack` (full title+body) for client-side search.
+ * @returns {Promise<Array<{id:string,title:string,preview:string,updatedAt:number,haystack:string}>>}
  */
 export async function listNotes() {
   await loadDek();
@@ -85,7 +86,7 @@ export async function listNotes() {
   for (const row of rows) {
     try {
       const { text } = await decryptRow(row);
-      out.push({ id: row.id, ...titleAndPreview(text), updatedAt: row.updatedAt });
+      out.push({ id: row.id, ...titleAndPreview(text), updatedAt: row.updatedAt, haystack: text.toLowerCase() });
     } catch {
       // A row we can't decrypt (e.g. wrong key after a bad migration) is skipped
       // rather than crashing the list.

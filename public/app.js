@@ -20,6 +20,9 @@ const els = {
   syncBtn: document.getElementById('syncBtn'),
   banner: document.getElementById('localOnlyBanner'),
   dismissBanner: document.getElementById('dismissBanner'),
+  search: document.getElementById('searchBox'),
+  exportBtn: document.getElementById('exportBtn'),
+  importFile: document.getElementById('importFile'),
 };
 
 let currentId = null;
@@ -32,6 +35,7 @@ let sync = null; // lazily-loaded sync module, if an account exists
 let nudgeAccount = null; // cached account state for the "local only" banner
 let nudgeDismissed = false;
 let lastNoteCount = 0;
+let searchQuery = '';
 
 function setView(view) {
   els.layout.dataset.view = view; // 'list' | 'editor' (matters on mobile)
@@ -53,6 +57,45 @@ function updateNudge() {
   els.banner.hidden = !!nudgeAccount || nudgeDismissed || lastNoteCount === 0;
 }
 
+/** Download all notes as a re-importable JSON file. */
+async function exportNotes() {
+  const list = await listNotes();
+  const notes = [];
+  for (const n of list) notes.push({ text: await getNoteText(n.id), updatedAt: n.updatedAt });
+  const payload = { app: 'notenewt', version: 1, notes };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `notenewt-export-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Import notes from a file. JSON exports merge as new notes; plain text/markdown
+ *  imports as a single note. Never overwrites existing notes. */
+async function importNotes(file) {
+  const raw = await file.text();
+  let texts = [];
+  try {
+    const data = JSON.parse(raw);
+    const arr = Array.isArray(data) ? data : data.notes;
+    if (Array.isArray(arr)) texts = arr.map((n) => (typeof n === 'string' ? n : n.text ?? ''));
+    else throw new Error('not a notes export');
+  } catch {
+    texts = [raw]; // treat the whole file as one plain-text note
+  }
+  let count = 0;
+  for (const t of texts) {
+    if (!t || t.trim() === '') continue;
+    await saveNote(crypto.randomUUID(), t);
+    count++;
+  }
+  await renderList();
+  scheduleSync();
+  els.status.textContent = `Imported ${count} note${count === 1 ? '' : 's'}`;
+}
+
 /** Ask the browser to keep our storage (exempt it from automatic eviction). */
 async function requestPersistence() {
   try {
@@ -65,11 +108,20 @@ async function requestPersistence() {
 }
 
 async function renderList() {
-  const notes = await listNotes();
-  els.list.textContent = '';
-  els.emptyHint.hidden = notes.length > 0 || pendingNew;
-  lastNoteCount = notes.length;
+  const all = await listNotes();
+  lastNoteCount = all.length;
   updateNudge();
+  const q = searchQuery.trim().toLowerCase();
+  const notes = q ? all.filter((n) => n.haystack.includes(q)) : all;
+  els.list.textContent = '';
+  els.emptyHint.hidden = all.length > 0 || pendingNew;
+  if (q && notes.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'search-empty';
+    li.textContent = `No notes match “${searchQuery.trim()}”.`;
+    els.list.appendChild(li);
+    return;
+  }
   for (const n of notes) {
     const li = document.createElement('li');
     li.className = 'note-item' + (n.id === currentId ? ' active' : '');
@@ -288,6 +340,16 @@ async function boot() {
     await renderList();
   });
   els.editor.addEventListener('input', scheduleSave);
+  els.search.addEventListener('input', () => {
+    searchQuery = els.search.value;
+    renderList();
+  });
+  els.exportBtn.addEventListener('click', () => exportNotes().catch(() => {}));
+  els.importFile.addEventListener('change', async () => {
+    const file = els.importFile.files[0];
+    if (file) await importNotes(file).catch(() => { els.status.textContent = 'Import failed'; });
+    els.importFile.value = '';
+  });
   window.addEventListener('beforeunload', () => {
     if (saveTimer && !(pendingNew && els.editor.value.trim() === '')) {
       saveNote(currentId, els.editor.value);

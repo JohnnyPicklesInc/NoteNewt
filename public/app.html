@@ -28,8 +28,17 @@
 
   <main class="layout" id="layout" data-view="list">
     <aside class="sidebar" id="sidebar">
+      <div class="search-wrap">
+        <input type="search" id="searchBox" class="search-box" placeholder="Search notes…"
+          autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search notes" />
+      </div>
       <ul class="note-list" id="noteList" aria-label="Your notes"></ul>
       <p class="empty-hint" id="emptyHint" hidden>No notes yet. Tap <strong>+ New</strong> to start.</p>
+      <div class="sidebar-foot">
+        <button id="exportBtn" class="linkbtn" type="button" title="Download all notes">⤓ Export</button>
+        <label class="linkbtn" for="importFile" title="Import notes from a file">⤒ Import</label>
+        <input type="file" id="importFile" accept="application/json,.json,.txt,.md,text/plain,text/markdown" hidden />
+      </div>
     </aside>
 
     <section class="editor-pane" id="editorPane">
