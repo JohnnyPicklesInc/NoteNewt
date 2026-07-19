@@ -240,10 +240,11 @@ async function initSync() {
   if (!account) return; // anonymous: nothing to sync
   try {
     sync = await import('./sync.js');
-    await sync.pull();
+    const conflicts = await sync.pull();
     await renderList();
     await sync.pushDirty();
     startPolling();
+    if (conflicts) noteConflicts(conflicts);
   } catch {
     /* sync is best-effort; offline is fine */
   }
@@ -253,12 +254,18 @@ async function initSync() {
 async function pollSync() {
   if (!sync || document.hidden) return;
   try {
-    await sync.pull();
+    const conflicts = await sync.pull();
     await renderList();
     await refreshOpenNote();
+    if (conflicts) noteConflicts(conflicts);
   } catch {
     /* offline — try again next tick */
   }
+}
+
+/** Surface preserved-conflict copies to the user. */
+function noteConflicts(n) {
+  els.status.textContent = `⚠️ ${n} conflicting edit${n === 1 ? '' : 's'} saved as a copy`;
 }
 
 /** If the open note changed remotely and the user has no unsaved edits, update it. */

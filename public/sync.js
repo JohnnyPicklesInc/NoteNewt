@@ -76,29 +76,62 @@ export async function pushDirty() {
   for (const row of dirty) await putNoteRow({ ...row, dirty: 0 });
 }
 
-/** Pull remote changes since the last cursor; merge last-write-wins. */
+/**
+ * Pull remote changes since the last cursor; merge last-write-wins, but never
+ * silently drop a concurrent edit. If a note changed remotely AND has unpushed
+ * local edits (dirty) with different content, the local version is preserved as
+ * a "conflicted copy" note before the remote version is applied.
+ * @returns {Promise<number>} the number of conflicts preserved.
+ */
 export async function pull() {
-  if (!(await kvGet('account'))) return;
+  if (!(await kvGet('account'))) return 0;
   const since = (await kvGet('syncCursor')) || 0;
   const r = await fetch(`/api/notes?since=${since}`);
   if (!r.ok) throw new Error('pull failed');
   const { notes } = await r.json();
+  const dek = currentDek();
   let maxTs = since;
+  let conflicts = 0;
+
   for (const remote of notes) {
     maxTs = Math.max(maxTs, remote.updatedAt);
     const local = await getNoteRow(remote.id);
-    if (!local || remote.updatedAt > local.updatedAt) {
-      await putNoteRow({
-        id: remote.id,
-        ciphertext: remote.ciphertext,
-        iv: remote.iv,
-        updatedAt: remote.updatedAt,
-        deleted: remote.deleted ? 1 : 0,
-        dirty: 0,
-      });
+    if (!local || remote.updatedAt <= local.updatedAt) continue; // local newer/equal → keep (it'll push)
+
+    // Remote is newer. If we have unpushed local edits that differ, it's a real
+    // conflict — save our version as a separate copy so nothing is lost.
+    if (local.dirty && dek) {
+      try {
+        const localText = await aesDecrypt(dek, unb64u(local.iv), unb64u(local.ciphertext));
+        const remoteText = await aesDecrypt(dek, unb64u(remote.iv), unb64u(remote.ciphertext));
+        if (localText !== remoteText && !local.deleted) {
+          const copy = await aesEncrypt(dek, `⚠️ Conflicted copy — edited on another device\n\n${localText}`);
+          await putNoteRow({
+            id: crypto.randomUUID(),
+            iv: b64u(copy.iv),
+            ciphertext: b64u(copy.ct),
+            updatedAt: Date.now(),
+            deleted: 0,
+            dirty: 1,
+          });
+          conflicts++;
+        }
+      } catch {
+        /* if we can't decrypt to compare, fall through and take remote */
+      }
     }
+
+    await putNoteRow({
+      id: remote.id,
+      ciphertext: remote.ciphertext,
+      iv: remote.iv,
+      updatedAt: remote.updatedAt,
+      deleted: remote.deleted ? 1 : 0,
+      dirty: 0,
+    });
   }
   await kvSet('syncCursor', maxTs);
+  return conflicts;
 }
 
 /** Sign out: clear the server session and wipe this device's local data. */
