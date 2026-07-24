@@ -260,20 +260,15 @@ async function flushSave() {
     els.status.textContent = '';
     return; // don't persist an untouched blank note
   }
-  const wasPending = pendingNew;
-  await saveNote(currentId, text);
+  if (!pendingNew && text === savedValue) {
+    els.status.textContent = 'Saved';
+    return; // nothing changed — don't re-save (which would bump order on mere navigation)
+  }
   pendingNew = false;
   savedValue = text;
+  await saveNote(currentId, text); // stamps a fresh updatedAt
   els.status.textContent = 'Saved';
-  if (wasPending) {
-    await renderList(); // new note now appears in the list
-  } else {
-    const li = els.list.querySelector(`.note-item[data-id="${currentId}"]`);
-    if (li) {
-      const firstLine = text.split('\n').find((l) => l.trim()) || 'Untitled note';
-      li.querySelector('h3').textContent = firstLine.trim();
-    }
-  }
+  await renderList(); // a real edit bumps this note to the top of the list, live
   scheduleSync();
 }
 
@@ -448,8 +443,9 @@ async function boot() {
     els.importFile.value = '';
   });
   window.addEventListener('beforeunload', () => {
-    if (saveTimer && !(pendingNew && els.editor.value.trim() === '')) {
-      saveNote(currentId, els.editor.value);
+    const text = els.editor.value;
+    if (currentId != null && text !== savedValue && !(pendingNew && text.trim() === '')) {
+      saveNote(currentId, text);
     }
   });
 
