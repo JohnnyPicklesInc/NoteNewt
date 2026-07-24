@@ -167,6 +167,11 @@ a { color: var(--brand-ink); }
   text-overflow: ellipsis;
 }
 .empty-hint { color: var(--muted); text-align: center; padding: 2rem 1rem; }
+.shared-lists { border-top: 1px solid var(--border); margin-top: 0.5rem; }
+.section-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0.75rem 0.9rem 0.25rem; }
+.note-item .badge { font-size: 0.72rem; color: var(--muted); }
+.shared-lists .note-item { position: relative; padding-right: 2rem; }
+.shared-lists .note-item .banner-x { position: absolute; top: 0.4rem; right: 0.35rem; font-size: 1.1rem; }
 .sidebar-foot { display: flex; gap: 1rem; padding: 0.6rem 0.9rem; border-top: 1px solid var(--border); }
 .linkbtn { background: none; border: 0; padding: 0; font: inherit; font-size: 0.85rem; color: var(--muted); cursor: pointer; }
 .linkbtn:hover { color: var(--text); }

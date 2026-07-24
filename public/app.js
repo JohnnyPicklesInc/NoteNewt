@@ -5,7 +5,7 @@
  */
 import { listNotes, getNoteText, saveNote, softDelete, loadDek } from './notes.js';
 import { webCryptoAvailable, randomBytes, aesEncrypt, pbkdf2, b64u } from './crypto.js';
-import { kvGet, kvSet } from './db.js';
+import { kvGet, kvSet, putListRef, allListRefs, deleteListRef } from './db.js';
 import { renderAd } from './ad.js';
 
 const els = {
@@ -37,6 +37,8 @@ const els = {
   listCopyOwner: document.getElementById('listCopyOwner'),
   listMsg: document.getElementById('listMsg'),
   listClose: document.getElementById('listClose'),
+  sharedListsSection: document.getElementById('sharedListsSection'),
+  sharedListsList: document.getElementById('sharedListsList'),
 };
 
 let currentId = null;
@@ -69,6 +71,40 @@ function relTime(ts) {
 function updateNudge() {
   if (!els.banner) return;
   els.banner.hidden = !!nudgeAccount || nudgeDismissed || lastNoteCount === 0;
+}
+
+/** Render the "Shared lists" section — lists you created, kept locally. */
+async function renderSharedLists() {
+  if (!els.sharedListsSection) return;
+  const refs = (await allListRefs()).sort((a, b) => b.createdAt - a.createdAt);
+  els.sharedListsSection.hidden = refs.length === 0;
+  els.sharedListsList.textContent = '';
+  for (const ref of refs) {
+    const link = `${location.origin}/l#${ref.id}.${ref.keyB64}.${ref.ownerSecretB64}`; // owner link
+    const li = document.createElement('li');
+    li.className = 'note-item';
+    const h = document.createElement('h3');
+    h.textContent = ref.title || 'Shared list';
+    const p = document.createElement('p');
+    p.className = 'badge';
+    p.textContent = `${ref.hasPassphrase ? '🔒 ' : ''}Shared list · you own it`;
+    li.append(h, p);
+    li.addEventListener('click', () => { location.href = link; });
+    const x = document.createElement('button');
+    x.className = 'banner-x';
+    x.type = 'button';
+    x.textContent = '×';
+    x.title = 'Remove from this list (does not delete the shared list itself)';
+    x.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (confirm('Remove this list from your sidebar? (The shared list itself stays — delete it from its own page.)')) {
+        await deleteListRef(ref.id);
+        await renderSharedLists();
+      }
+    });
+    li.append(x);
+    els.sharedListsList.appendChild(li);
+  }
 }
 
 function openListModal() {
@@ -113,7 +149,10 @@ async function createSharedList() {
     const data = await r.json();
     if (!r.ok) { els.listMsg.innerHTML = `<div class="msg msg-err">${data.error || 'Could not create the list.'}</div>`; return; }
 
-    await kvSet(`listOwner:${data.id}`, b64u(ownerSecret)); // remember ownership on this device
+    // Remember this list locally so it stays findable in the sidebar.
+    const title = (text.split('\n').find((l) => l.trim()) || 'Shared list').trim().slice(0, 80);
+    await putListRef({ id: data.id, keyB64: keyLinkPart, ownerSecretB64: b64u(ownerSecret), hasPassphrase, title, createdAt: Date.now() });
+    await renderSharedLists();
     const shareLink = `${location.origin}/l#${data.id}${keyLinkPart ? `.${keyLinkPart}` : ''}`;
     const ownerLink = `${location.origin}/l#${data.id}.${keyLinkPart}.${b64u(ownerSecret)}`;
     els.listShareLink.value = shareLink;
@@ -399,6 +438,7 @@ async function boot() {
 
   await loadDek();
   await renderList();
+  renderSharedLists();
 
   els.dismissBanner.addEventListener('click', () => {
     nudgeDismissed = true;

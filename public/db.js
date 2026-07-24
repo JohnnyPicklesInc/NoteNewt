@@ -1,14 +1,16 @@
 /**
- * Minimal IndexedDB wrapper for Note Newt. Two stores:
+ * Minimal IndexedDB wrapper for Note Newt. Object stores:
  *   - `notes`: encrypted note blobs { id, ciphertext, iv, updatedAt, deleted, dirty }
  *   - `kv`:    small key-value bag for the device DEK, sync cursor, account state
+ *   - `lists`: references to shared lists you created { id, keyB64, ownerSecretB64,
+ *              hasPassphrase, title, createdAt } so they stay findable in the app
  *
  * Everything here is local + offline. Note plaintext is never stored — only
  * AES-GCM ciphertext (see crypto.js / notes.js).
  */
 
 const DB_NAME = 'notenewt';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise = null;
 
@@ -23,6 +25,9 @@ function openDb() {
       }
       if (!db.objectStoreNames.contains('kv')) {
         db.createObjectStore('kv', { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains('lists')) {
+        db.createObjectStore('lists', { keyPath: 'id' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -82,7 +87,26 @@ export async function kvDelete(key) {
   return reqToPromise(store.delete(key));
 }
 
-/** Wipe all local data (used on sign-out to clear a device). */
+// --- shared-list references --------------------------------------------------
+
+export async function putListRef(ref) {
+  const store = await tx('lists', 'readwrite');
+  return reqToPromise(store.put(ref));
+}
+
+export async function allListRefs() {
+  const store = await tx('lists', 'readonly');
+  return reqToPromise(store.getAll());
+}
+
+export async function deleteListRef(id) {
+  const store = await tx('lists', 'readwrite');
+  return reqToPromise(store.delete(id));
+}
+
+/** Wipe local notes + account (used on sign-out). Shared-list references are
+ *  kept — they're independent capability objects, not tied to the account, so
+ *  clearing them would lose access to lists you created. */
 export async function wipeLocal() {
   const db = await openDb();
   await Promise.all(
