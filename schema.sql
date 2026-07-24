@@ -82,6 +82,16 @@ CREATE TABLE IF NOT EXISTS shared_lists (
   updated_at     INTEGER NOT NULL
 );
 
+-- Per-account encrypted bundle of a user's shared-list references (id + content
+-- key + owner secret + title), so their shared lists follow them across devices.
+-- Encrypted with the account DEK client-side; the server holds only ciphertext.
+CREATE TABLE IF NOT EXISTS user_lists (
+  user_id     TEXT PRIMARY KEY,
+  ciphertext  TEXT NOT NULL,
+  iv          TEXT NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
+
 -- Recent versions kept for one-click revert of vandalism (capped per list).
 CREATE TABLE IF NOT EXISTS shared_list_versions (
   id          TEXT NOT NULL,

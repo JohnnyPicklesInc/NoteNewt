@@ -5,7 +5,7 @@
  *
  * The server only ever receives ciphertext and a PRF-wrapped DEK it cannot open.
  */
-import { allNoteRows, putNoteRow, getNoteRow, kvGet, kvSet, wipeLocal } from './db.js';
+import { allNoteRows, putNoteRow, getNoteRow, kvGet, kvSet, wipeLocal, allListRefs, putListRef } from './db.js';
 import { aesDecrypt, aesEncrypt, b64u, unb64u } from './crypto.js';
 import { currentDek, setDek, loadDek } from './notes.js';
 
@@ -134,6 +134,52 @@ export async function pull() {
   }
   await kvSet('syncCursor', maxTs);
   return conflicts;
+}
+
+/**
+ * Sync the encrypted bundle of shared-list references so a user's shared lists
+ * follow them across devices. Pull → merge by id (newest wins, tombstones honored)
+ * → write local → push the union. Convergent across devices. Requires the DEK.
+ * @returns {Promise<Array|undefined>} the merged refs (undefined if not signed in).
+ */
+export async function syncListRefs() {
+  if (!(await kvGet('account'))) return undefined;
+  const dek = currentDek();
+  if (!dek) return undefined;
+
+  let remote = [];
+  try {
+    const r = await fetch('/api/list-refs');
+    if (r.status === 401) return undefined;
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ciphertextB64) remote = JSON.parse(await aesDecrypt(dek, unb64u(d.ivB64), unb64u(d.ciphertextB64)));
+    }
+  } catch {
+    return undefined; // offline
+  }
+
+  const byId = new Map();
+  for (const row of await allListRefs()) byId.set(row.id, row);
+  for (const row of Array.isArray(remote) ? remote : []) {
+    const ex = byId.get(row.id);
+    if (!ex || (row.updatedAt || 0) > (ex.updatedAt || 0)) byId.set(row.id, row);
+  }
+  const merged = [...byId.values()];
+  for (const row of merged) await putListRef(row);
+
+  try {
+    const { iv, ct } = await aesEncrypt(dek, JSON.stringify(merged));
+    const updatedAt = merged.reduce((m, r) => Math.max(m, r.updatedAt || 0), 0) || Date.now();
+    await fetch('/api/list-refs', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ciphertextB64: b64u(ct), ivB64: b64u(iv), updatedAt }),
+    });
+  } catch {
+    /* offline — will re-push next time */
+  }
+  return merged;
 }
 
 /** Sign out: clear the server session and wipe this device's local data. */

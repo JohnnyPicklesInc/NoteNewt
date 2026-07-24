@@ -76,7 +76,7 @@ function updateNudge() {
 /** Render the "Shared lists" section — lists you created, kept locally. */
 async function renderSharedLists() {
   if (!els.sharedListsSection) return;
-  const refs = (await allListRefs()).sort((a, b) => b.createdAt - a.createdAt);
+  const refs = (await allListRefs()).filter((r) => !r.deleted).sort((a, b) => b.createdAt - a.createdAt);
   els.sharedListsSection.hidden = refs.length === 0;
   els.sharedListsList.textContent = '';
   for (const ref of refs) {
@@ -98,8 +98,9 @@ async function renderSharedLists() {
     x.addEventListener('click', async (e) => {
       e.stopPropagation();
       if (confirm('Remove this list from your sidebar? (The shared list itself stays — delete it from its own page.)')) {
-        await deleteListRef(ref.id);
+        await putListRef({ ...ref, deleted: 1, updatedAt: Date.now() }); // tombstone so the removal syncs
         await renderSharedLists();
+        if (sync) sync.syncListRefs().catch(() => {});
       }
     });
     li.append(x);
@@ -149,10 +150,12 @@ async function createSharedList() {
     const data = await r.json();
     if (!r.ok) { els.listMsg.innerHTML = `<div class="msg msg-err">${data.error || 'Could not create the list.'}</div>`; return; }
 
-    // Remember this list locally so it stays findable in the sidebar.
+    // Remember this list locally so it stays findable in the sidebar (and syncs).
     const title = (text.split('\n').find((l) => l.trim()) || 'Shared list').trim().slice(0, 80);
-    await putListRef({ id: data.id, keyB64: keyLinkPart, ownerSecretB64: b64u(ownerSecret), hasPassphrase, title, createdAt: Date.now() });
+    const now = Date.now();
+    await putListRef({ id: data.id, keyB64: keyLinkPart, ownerSecretB64: b64u(ownerSecret), hasPassphrase, title, createdAt: now, updatedAt: now, deleted: 0 });
     await renderSharedLists();
+    if (sync) sync.syncListRefs().catch(() => {});
     const shareLink = `${location.origin}/l#${data.id}${keyLinkPart ? `.${keyLinkPart}` : ''}`;
     const ownerLink = `${location.origin}/l#${data.id}.${keyLinkPart}.${b64u(ownerSecret)}`;
     els.listShareLink.value = shareLink;
@@ -362,6 +365,8 @@ async function initSync() {
     await sync.pushDirty();
     startPolling();
     if (conflicts) noteConflicts(conflicts);
+    await sync.syncListRefs(); // shared lists follow the account across devices
+    await renderSharedLists();
   } catch {
     /* sync is best-effort; offline is fine */
   }
